@@ -9,6 +9,7 @@
 #include <CommCtrl.h>
 
 #include "resource.h"
+#include "vconv.h"
 
 #pragma comment(lib,"ComCtl32.lib")
 
@@ -21,6 +22,7 @@
 HINSTANCE hInst;                                // 当前实例
 WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
 WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
+HWND hWndMain;
 
 // 此代码模块中包含的函数的前向声明:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -63,6 +65,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+	for (int i = 0; i < VCONV_MAX_CONTROLLER; i++)
+		VConVDisconnectControllerAndClosePort(i);
+	VConVRelease();
+
     return (int) msg.wParam;
 }
 
@@ -96,14 +102,130 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 #define ID_STATUS_BAR 2000
 #define ID_CONTROLLER_DLG 2001
+#define PORT_DEFAULT 32000
+#define INI_FILE TEXT(".\\config.ini")
+#define INI_APPNAME TEXT("vconvwin")
+
+BOOL SavePortConfig(int n, int port)
+{
+	TCHAR key[8], szPort[8];
+	wsprintf(key, TEXT("Port%d"), n);
+	wsprintf(szPort, TEXT("%d"), port);
+	return WritePrivateProfileString(INI_APPNAME, key, szPort, INI_FILE);
+}
+
+WORD ReadPortConfig(int n)
+{
+	TCHAR key[8];
+	wsprintf(key, TEXT("Port%d"), n);
+	return GetPrivateProfileInt(INI_APPNAME, key, PORT_DEFAULT + n, INI_FILE);
+}
+
+void UISetControllerStatus(int n, int status)
+{
+	int idsIcon[] = { IDC_STATIC_STATUS1,IDC_STATIC_STATUS2, IDC_STATIC_STATUS3, IDC_STATIC_STATUS4 };
+	int idsCheck[] = { IDC_CHECK_ENABLE1,IDC_CHECK_ENABLE2, IDC_CHECK_ENABLE3, IDC_CHECK_ENABLE4 };
+	int idsStat[] = { IDB_BITMAP_OFFLINE,IDB_BITMAP_LISTEN,IDB_BITMAP_LISTEN,IDB_BITMAP_ONLINE };
+	int statButton[] = { BST_UNCHECKED,BST_CHECKED,BST_CHECKED,BST_CHECKED };
+	HWND hDlg = GetDlgItem(hWndMain, ID_CONTROLLER_DLG);
+	SendDlgItemMessage(hDlg, idsIcon[n], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(idsStat[status])));
+	SendDlgItemMessage(hDlg, idsCheck[n], BM_SETCHECK, statButton[status], 0);
+	int idsStr[] = { IDS_STRING_CONTROLLER_DISCONNECT,IDS_STRING_CONTROLLER_LISTEN,IDS_STRING_CONTROLLER_DISCONNECT,IDS_STRING_CONTROLLER_CONNECT };
+	TCHAR buf[128], pbuf[128];
+	LoadString(hInst, idsStr[status], pbuf, ARRAYSIZE(pbuf));
+	wsprintf(buf, pbuf, n + 1, VConVGetListeningPort(n));
+	SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+}
+
+int WINAPI MBPrintfW(int iconType, LPCWSTR title, LPCWSTR fmt, ...)
+{
+	va_list va;
+	WCHAR text[4096];
+	va_start(va, fmt);
+	wvsprintfW(text, fmt, va);
+	va_end(va);
+	return MessageBoxW(hWndMain, text, title, iconType);
+}
+
+void DlgDisableController(int n)
+{
+	VConVDisconnectControllerAndClosePort(n);
+	UISetControllerStatus(n, 0);
+}
+
+void DlgEnableController(int n, int port)
+{
+	if (VConVConnectControllerAndListenPort(n, port))
+	{
+		TCHAR buf[32];
+		LoadString(hInst, IDS_STRING_PORT_CONFLICT, buf, ARRAYSIZE(buf));
+		MBPrintfW(MB_ICONERROR, NULL, buf, n, port);
+		DlgDisableController(n);
+		return;
+	}
+	UISetControllerStatus(n, 1);
+}
 
 INT_PTR CALLBACK ControllerDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
 	case WM_INITDIALOG:
+		//设置编辑框范围
+		SendDlgItemMessage(hWnd, IDC_SPIN_PORT1, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessage(hWnd, IDC_SPIN_PORT2, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessage(hWnd, IDC_SPIN_PORT3, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessage(hWnd, IDC_SPIN_PORT4, UDM_SETRANGE32, 0, 65535);
+		//读取存储值
+		SetDlgItemInt(hWnd, IDC_EDIT_PORT1, ReadPortConfig(0), FALSE);
+		SetDlgItemInt(hWnd, IDC_EDIT_PORT2, ReadPortConfig(1), FALSE);
+		SetDlgItemInt(hWnd, IDC_EDIT_PORT3, ReadPortConfig(2), FALSE);
+		SetDlgItemInt(hWnd, IDC_EDIT_PORT4, ReadPortConfig(3), FALSE);
 		break;
-	case WM_SHOWWINDOW:
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDC_CHECK_ENABLE1:
+			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE1, BM_GETCHECK, 0, 0) == BST_CHECKED)
+				DlgDisableController(0);
+			else
+				DlgEnableController(0, GetDlgItemInt(hWnd, IDC_EDIT_PORT1, NULL, FALSE));
+			break;
+		case IDC_CHECK_ENABLE2:
+			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE2, BM_GETCHECK, 0, 0) == BST_CHECKED)
+				DlgDisableController(1);
+			else
+				DlgEnableController(1, GetDlgItemInt(hWnd, IDC_EDIT_PORT2, NULL, FALSE));
+			break;
+		case IDC_CHECK_ENABLE3:
+			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE3, BM_GETCHECK, 0, 0) == BST_CHECKED)
+				DlgDisableController(2);
+			else
+				DlgEnableController(2, GetDlgItemInt(hWnd, IDC_EDIT_PORT3, NULL, FALSE));
+			break;
+		case IDC_CHECK_ENABLE4:
+			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE4, BM_GETCHECK, 0, 0) == BST_CHECKED)
+				DlgDisableController(3);
+			else
+				DlgEnableController(3, GetDlgItemInt(hWnd, IDC_EDIT_PORT4, NULL, FALSE));
+			break;
+		case IDC_EDIT_PORT1:
+			if (HIWORD(wParam) == EN_CHANGE && IsWindowVisible(hWnd))
+				SavePortConfig(0, GetDlgItemInt(hWnd, IDC_EDIT_PORT1, NULL, FALSE));
+			break;
+		case IDC_EDIT_PORT2:
+			if (HIWORD(wParam) == EN_CHANGE && IsWindowVisible(hWnd))
+				SavePortConfig(1, GetDlgItemInt(hWnd, IDC_EDIT_PORT2, NULL, FALSE));
+			break;
+		case IDC_EDIT_PORT3:
+			if (HIWORD(wParam) == EN_CHANGE && IsWindowVisible(hWnd))
+				SavePortConfig(2, GetDlgItemInt(hWnd, IDC_EDIT_PORT3, NULL, FALSE));
+			break;
+		case IDC_EDIT_PORT4:
+			if (HIWORD(wParam) == EN_CHANGE && IsWindowVisible(hWnd))
+				SavePortConfig(3, GetDlgItemInt(hWnd, IDC_EDIT_PORT4, NULL, FALSE));
+			break;
+		}
 		break;
 	}
 	return 0;
@@ -125,10 +247,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    InitCommonControls();
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   hWndMain = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 	   CW_USEDEFAULT, 0, PhyPixelsX(400), PhyPixelsY(300), nullptr, nullptr, hInstance, nullptr);
 
-   if (!hWnd)
+   if (!hWndMain)
    {
       return FALSE;
    }
@@ -140,17 +262,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   SBARS_SIZEGRIP |         // includes a sizing grip
 	   WS_CHILD | WS_VISIBLE,   // creates a visible child window
 	   0, 0, 0, 0,              // ignores size and position
-	   hWnd,              // handle to parent window
+	   hWndMain,              // handle to parent window
 	   (HMENU)ID_STATUS_BAR,       // child window identifier
 	   hInst,                   // handle to application instance
 	   NULL);
 
-   HWND hDlg = CreateDialog(hInst, MAKEINTRESOURCE(IDD_CONTROLLER_STAT), hWnd, ControllerDlgProc);
+   HWND hDlg = CreateDialog(hInst, MAKEINTRESOURCE(IDD_CONTROLLER_STAT), hWndMain, ControllerDlgProc);
    SetWindowLongPtr(hDlg, GWLP_ID, ID_CONTROLLER_DLG);
    ShowWindow(hDlg, nCmdShow);
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+   ShowWindow(hWndMain, nCmdShow);
+   UpdateWindow(hWndMain);
 
    return TRUE;
 }
@@ -203,13 +325,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		RECT rs;
 		GetClientRect(hSub, &rs);
 		MoveWindow(hSub, 0, 0, 0, 0, FALSE);//状态栏的矩形是系统自己管理的
-		TCHAR buf[30];
-		wsprintf(buf, TEXT("%dx%d"), LOWORD(lParam), HIWORD(lParam));
-		SetWindowText(hSub, buf);
 		hSub = GetDlgItem(hWnd, ID_CONTROLLER_DLG);
 		RECT r;
 		GetClientRect(hWnd, &r);
-		MoveWindow(hSub, r.left, r.top, r.right - r.left, r.bottom - r.top - rs.bottom + rs.top, FALSE);
+		MoveWindow(hSub, r.left, r.top, r.right - r.left, r.bottom - r.top - rs.bottom + rs.top, TRUE);
+	}
+		break;
+	case WM_SHOWWINDOW:
+	{
+		int r = VConVInit();
+		TCHAR buf[32];
+		if (r == 0)
+		{
+			LoadString(hInst, IDS_STRING_INIT_OK, buf, ARRAYSIZE(buf));
+		}
+		else
+		{
+			TCHAR pbuf[32];
+			LoadString(hInst, IDS_STRING_INIT_FAIL, pbuf, ARRAYSIZE(pbuf));
+			wsprintf(buf, pbuf, r);
+		}
+		SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
 	}
 		break;
     default:

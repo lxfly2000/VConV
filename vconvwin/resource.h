@@ -8,9 +8,15 @@
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
+#define IDS_STRING_INIT_OK              104
 #define IDM_EXIT                        105
+#define IDS_STRING_INIT_FAIL            105
+#define IDS_STRING_CONTROLLER_CONNECT   106
 #define IDI_VCONVWIN                    107
+#define IDS_STRING_CONTROLLER_DISCONNECT 107
+#define IDS_STRING_CONTROLLER_LISTEN    108
 #define IDC_VCONVWIN                    109
+#define IDS_STRING_PORT_CONFLICT        110
 #define IDR_MAINFRAME                   128
 #define IDB_BITMAP_ONLINE               129
 #define IDB_BITMAP_OFFLINE              130

@@ -88,3 +88,86 @@ int VGMain()
 
 	return 0;
 }
+
+PVIGEM_CLIENT client = NULL;
+PVIGEM_TARGET targets[VCONV_MAX_CONTROLLER] = { NULL };
+
+int VConVInit()
+{
+	client = vigem_alloc();
+	if (client == nullptr)
+		return -1;
+	VIGEM_ERROR ret = vigem_connect(client);
+	if (!VIGEM_SUCCESS(ret))
+		return ret;
+	return 0;
+}
+
+int VConVRelease()
+{
+	vigem_free(client);
+	return 0;
+}
+
+int VConVConnectControllerAndListenPort(int n, WORD port)
+{
+	int r = VConVConnectController(n);
+	if (r)
+		return r;
+
+	return VConVListenPort(n, port);
+}
+
+int VConVDisconnectControllerAndClosePort(int n)
+{
+	int r = VConVDisconnectController(n);
+	if (r)
+		return r;
+
+	return VConVClosePort(n);
+}
+
+WORD VConVGetListeningPort(int n)
+{
+	//TODO
+	return 0;
+}
+
+BOOL VConVGetControllerIsConnected(int n)
+{
+	return targets[n] != NULL;
+}
+
+int VConVConnectController(int n)
+{
+	targets[n] = vigem_target_x360_alloc();
+	VIGEM_ERROR err = vigem_target_add(client, targets[n]);
+	if (!VIGEM_SUCCESS(err))
+	{
+		vigem_target_remove(client, targets[n]);
+		vigem_target_free(targets[n]);
+		targets[n] = NULL;
+		return err;
+	}
+	return 0;
+}
+
+int VConVDisconnectController(int n)
+{
+	VIGEM_ERROR err = vigem_target_remove(client, targets[n]);
+	if (!VIGEM_SUCCESS(err))
+		return err;
+	return 0;
+}
+
+int VConVListenPort(int n, WORD port)
+{
+	//TODO
+	return 0;
+}
+
+int VConVClosePort(int n)
+{
+	//TODO
+	return 0;
+}
