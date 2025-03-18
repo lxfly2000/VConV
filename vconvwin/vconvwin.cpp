@@ -107,6 +107,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 #define INI_APPNAME TEXT("vconvwin")
 #define VCONV_WM_SETCONTROLLERSTATUS WM_USER+2000
 #define VCONV_WM_ERRORCONTROLLER WM_USER+2001
+#define VCONV_WM_ERRORBOX WM_USER+2002
 
 BOOL SavePortConfig(int n, int port)
 {
@@ -146,7 +147,12 @@ void OnUISetControllerStatus(int n, int status)
 
 void UIReportErrorController(int n, int error)
 {
-	PostMessage(hWndMain, VCONV_WM_ERRORCONTROLLER, n, VCONV_ERROR_PORT);
+	PostMessage(hWndMain, VCONV_WM_ERRORCONTROLLER, n, error);
+}
+
+void UIErrorBox(int error)
+{
+	PostMessage(hWndMain, VCONV_WM_ERRORBOX, 0, error);
 }
 
 int WINAPI MBPrintfW(int iconType, LPCWSTR title, LPCWSTR fmt, ...)
@@ -157,6 +163,18 @@ int WINAPI MBPrintfW(int iconType, LPCWSTR title, LPCWSTR fmt, ...)
 	wvsprintfW(text, fmt, va);
 	va_end(va);
 	return MessageBoxW(hWndMain, text, title, iconType);
+}
+
+int OnUIErrorBox(int error)
+{
+	TCHAR buf[32];
+	switch (error)
+	{
+	case VCONV_ERROR_SOCKET_INIT_ERROR:
+		LoadString(hInst, IDS_STRING_SOCKET_INIT_ERROR, buf, ARRAYSIZE(buf));
+		break;
+	}
+	return MBPrintfW(MB_ICONERROR, NULL, buf);
 }
 
 void DlgDisableController(int n)
@@ -173,6 +191,9 @@ void OnUIReportErrorController(int n, int error)
 	case VCONV_ERROR_PORT:
 		LoadString(hInst, IDS_STRING_PORT_CONFLICT, buf, ARRAYSIZE(buf));
 		break;
+	case VCONV_ERROR_SOCKET_CREATE_ERROR:
+		LoadString(hInst, IDS_STRING_SOCKET_CREATE_ERROR, buf, ARRAYSIZE(buf));
+		break;
 	}
 	MBPrintfW(MB_ICONERROR, NULL, buf, n, VConVGetListeningPort(n));
 	DlgDisableController(n);
@@ -185,7 +206,7 @@ void DlgEnableController(int n, int port)
 		UIReportErrorController(n, VCONV_ERROR_PORT);
 		return;
 	}
-	UISetControllerStatus(n, 1);
+	UISetControllerStatus(n, 3);
 }
 
 INT_PTR CALLBACK ControllerDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -375,6 +396,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case VCONV_WM_ERRORCONTROLLER:
 		OnUIReportErrorController(wParam, lParam);
+		break;
+	case VCONV_WM_ERRORBOX:
+		OnUIErrorBox(lParam);
 		break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);

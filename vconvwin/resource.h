@@ -17,6 +17,8 @@
 #define IDS_STRING_CONTROLLER_LISTEN    108
 #define IDC_VCONVWIN                    109
 #define IDS_STRING_PORT_CONFLICT        110
+#define IDS_STRING_SOCKET_INIT_ERROR    111
+#define IDS_STRING_SOCKET_CREATE_ERROR  112
 #define IDR_MAINFRAME                   128
 #define IDB_BITMAP_ONLINE               129
 #define IDB_BITMAP_OFFLINE              130

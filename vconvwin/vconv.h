@@ -22,5 +22,8 @@ int VConVDisconnectControllerAndClosePort(int n);
 void UISetControllerStatus(int n, int status);
 //±¨´í²¢Í£Ö¹¿ØÖÆÆ÷
 void UIReportErrorController(int n, int error);
+void UIErrorBox(int error);
 
 #define VCONV_ERROR_PORT 1
+#define VCONV_ERROR_SOCKET_INIT_ERROR 2
+#define VCONV_ERROR_SOCKET_CREATE_ERROR 3
