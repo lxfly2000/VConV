@@ -1,9 +1,12 @@
-#include "vconv.h"
 #include <iostream>
+#include <thread>
+#include <future>
+#include <atomic>
 #include <Windows.h>
-#include <Xinput.h>
 
 #include <ViGEm/Client.h>
+
+#include "vconv.h"
 
 #pragma comment(lib, "setupapi.lib")
 #pragma comment(lib, "xinput.lib")
@@ -91,6 +94,27 @@ int VGMain()
 
 PVIGEM_CLIENT client = NULL;
 PVIGEM_TARGET targets[VCONV_MAX_CONTROLLER] = { NULL };
+XINPUT_STATE states[VCONV_MAX_CONTROLLER] = { NULL };
+WORD ports[VCONV_MAX_CONTROLLER] = { 0 };
+std::thread tds[VCONV_MAX_CONTROLLER];
+std::promise<int>promiseReturns[VCONV_MAX_CONTROLLER];
+std::atomic_int tRunnings[VCONV_MAX_CONTROLLER] = { 0 };
+
+void ControllerThread(int n)
+{
+	//TODO
+	while (tRunnings[n])
+	{
+		int error = 1;
+		if (error)
+		{
+			UIReportErrorController(n, VCONV_ERROR_PORT);
+			promiseReturns[n].set_value(-1);
+			return;
+		}
+	}
+	promiseReturns[n].set_value(0);
+}
 
 int VConVInit()
 {
@@ -105,6 +129,8 @@ int VConVInit()
 
 int VConVRelease()
 {
+	for (int i = 0; i < VCONV_MAX_CONTROLLER; i++)
+		VConVClosePort(i);
 	vigem_free(client);
 	return 0;
 }
@@ -162,12 +188,23 @@ int VConVDisconnectController(int n)
 
 int VConVListenPort(int n, WORD port)
 {
-	//TODO
+	ports[n] = port;
+	tRunnings[n] = 1;
+	promiseReturns[n] = std::promise<int>();
+	tds[n] = std::thread(ControllerThread, n);
 	return 0;
 }
 
 int VConVClosePort(int n)
 {
-	//TODO
+	tRunnings[n] = 0;
+	if (tds[n].joinable())
+	{
+		tds[n].join();
+		std::future<int>f = promiseReturns[n].get_future();
+		int r = f.get();
+		if (r)
+			return 0;
+	}
 	return 0;
 }

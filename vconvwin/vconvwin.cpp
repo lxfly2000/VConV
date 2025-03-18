@@ -105,6 +105,8 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 #define PORT_DEFAULT 32000
 #define INI_FILE TEXT(".\\config.ini")
 #define INI_APPNAME TEXT("vconvwin")
+#define VCONV_WM_SETCONTROLLERSTATUS WM_USER+2000
+#define VCONV_WM_ERRORCONTROLLER WM_USER+2001
 
 BOOL SavePortConfig(int n, int port)
 {
@@ -123,6 +125,11 @@ WORD ReadPortConfig(int n)
 
 void UISetControllerStatus(int n, int status)
 {
+	PostMessage(hWndMain, VCONV_WM_SETCONTROLLERSTATUS, n, status);
+}
+
+void OnUISetControllerStatus(int n, int status)
+{
 	int idsIcon[] = { IDC_STATIC_STATUS1,IDC_STATIC_STATUS2, IDC_STATIC_STATUS3, IDC_STATIC_STATUS4 };
 	int idsCheck[] = { IDC_CHECK_ENABLE1,IDC_CHECK_ENABLE2, IDC_CHECK_ENABLE3, IDC_CHECK_ENABLE4 };
 	int idsStat[] = { IDB_BITMAP_OFFLINE,IDB_BITMAP_LISTEN,IDB_BITMAP_LISTEN,IDB_BITMAP_ONLINE };
@@ -135,6 +142,11 @@ void UISetControllerStatus(int n, int status)
 	LoadString(hInst, idsStr[status], pbuf, ARRAYSIZE(pbuf));
 	wsprintf(buf, pbuf, n + 1, VConVGetListeningPort(n));
 	SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+}
+
+void UIReportErrorController(int n, int error)
+{
+	PostMessage(hWndMain, VCONV_WM_ERRORCONTROLLER, n, VCONV_ERROR_PORT);
 }
 
 int WINAPI MBPrintfW(int iconType, LPCWSTR title, LPCWSTR fmt, ...)
@@ -153,14 +165,24 @@ void DlgDisableController(int n)
 	UISetControllerStatus(n, 0);
 }
 
+void OnUIReportErrorController(int n, int error)
+{
+	TCHAR buf[32];
+	switch (error)
+	{
+	case VCONV_ERROR_PORT:
+		LoadString(hInst, IDS_STRING_PORT_CONFLICT, buf, ARRAYSIZE(buf));
+		break;
+	}
+	MBPrintfW(MB_ICONERROR, NULL, buf, n, VConVGetListeningPort(n));
+	DlgDisableController(n);
+}
+
 void DlgEnableController(int n, int port)
 {
 	if (VConVConnectControllerAndListenPort(n, port))
 	{
-		TCHAR buf[32];
-		LoadString(hInst, IDS_STRING_PORT_CONFLICT, buf, ARRAYSIZE(buf));
-		MBPrintfW(MB_ICONERROR, NULL, buf, n, port);
-		DlgDisableController(n);
+		UIReportErrorController(n, VCONV_ERROR_PORT);
 		return;
 	}
 	UISetControllerStatus(n, 1);
@@ -347,6 +369,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
 	}
+		break;
+	case VCONV_WM_SETCONTROLLERSTATUS:
+		OnUISetControllerStatus(wParam, lParam);
+		break;
+	case VCONV_WM_ERRORCONTROLLER:
+		OnUIReportErrorController(wParam, lParam);
 		break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);

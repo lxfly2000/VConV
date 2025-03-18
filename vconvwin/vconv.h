@@ -1,7 +1,10 @@
 #pragma once
-//XINPUT最多支持4个手柄
-#define VCONV_MAX_CONTROLLER 4
 #include <Windows.h>
+#include <Xinput.h>
+
+//XINPUT最多支持4个手柄
+#define VCONV_MAX_CONTROLLER XUSER_MAX_COUNT
+
 int VConVInit();
 int VConVRelease();
 BOOL VConVGetControllerIsConnected(int n);
@@ -17,3 +20,7 @@ int VConVDisconnectControllerAndClosePort(int n);
 
 //Status:0=未启用 1=监听中 3=已连接
 void UISetControllerStatus(int n, int status);
+//报错并停止控制器
+void UIReportErrorController(int n, int error);
+
+#define VCONV_ERROR_PORT 1
