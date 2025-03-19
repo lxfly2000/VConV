@@ -7,16 +7,17 @@
 #include <memory.h>
 #include <tchar.h>
 #include <CommCtrl.h>
+#include <shellapi.h>
+#include <WS2tcpip.h>
 
 #include "resource.h"
 #include "vconv.h"
+#include "docwindow.h"
+#include "common.h"
 
 #pragma comment(lib,"ComCtl32.lib")
 
 #define MAX_LOADSTRING 100
-
-#define PhyPixelsX(logicPixelsX) MulDiv(logicPixelsX,GetDeviceCaps(GetDC(0),LOGPIXELSX),USER_DEFAULT_SCREEN_DPI)
-#define PhyPixelsY(logicPixelsY) MulDiv(logicPixelsY,GetDeviceCaps(GetDC(0),LOGPIXELSY),USER_DEFAULT_SCREEN_DPI)
 
 // 全局变量:
 HINSTANCE hInst;                                // 当前实例
@@ -38,7 +39,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: 在此处放置代码。
+    // 在此处放置代码。
 
     // 初始化全局字符串
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -103,25 +104,25 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 #define ID_STATUS_BAR 2000
 #define ID_CONTROLLER_DLG 2001
 #define PORT_DEFAULT 32000
-#define INI_FILE TEXT(".\\config.ini")
-#define INI_APPNAME TEXT("vconvwin")
+#define INI_FILE ".\\config.ini"
+#define INI_APPNAME "vconvwin"
 #define VCONV_WM_SETCONTROLLERSTATUS WM_USER+2000
 #define VCONV_WM_ERRORCONTROLLER WM_USER+2001
 #define VCONV_WM_ERRORBOX WM_USER+2002
 
 BOOL SavePortConfig(int n, int port)
 {
-	TCHAR key[8], szPort[8];
-	wsprintf(key, TEXT("Port%d"), n);
-	wsprintf(szPort, TEXT("%d"), port);
-	return WritePrivateProfileString(INI_APPNAME, key, szPort, INI_FILE);
+	char key[8], szPort[8];
+	wsprintfA(key, "Port%d", n);
+	wsprintfA(szPort, "%d", port);
+	return WritePrivateProfileStringA(INI_APPNAME, key, szPort, INI_FILE);
 }
 
 WORD ReadPortConfig(int n)
 {
-	TCHAR key[8];
-	wsprintf(key, TEXT("Port%d"), n);
-	return GetPrivateProfileInt(INI_APPNAME, key, PORT_DEFAULT + n, INI_FILE);
+	char key[8];
+	wsprintfA(key, "Port%d", n);
+	return GetPrivateProfileIntA(INI_APPNAME, key, PORT_DEFAULT + n, INI_FILE);
 }
 
 void UISetControllerStatus(int n, int status)
@@ -135,6 +136,8 @@ void OnUISetControllerStatus(int n, int status)
 	int idsCheck[] = { IDC_CHECK_ENABLE1,IDC_CHECK_ENABLE2, IDC_CHECK_ENABLE3, IDC_CHECK_ENABLE4 };
 	int idsStat[] = { IDB_BITMAP_OFFLINE,IDB_BITMAP_LISTEN,IDB_BITMAP_LISTEN,IDB_BITMAP_ONLINE };
 	int statButton[] = { BST_UNCHECKED,BST_CHECKED,BST_CHECKED,BST_CHECKED };
+	int idsEdit[] = { IDC_EDIT_PORT1,IDC_EDIT_PORT2,IDC_EDIT_PORT3,IDC_EDIT_PORT4 };
+	int idsSpin[] = { IDC_SPIN_PORT1,IDC_SPIN_PORT2,IDC_SPIN_PORT3,IDC_SPIN_PORT4 };
 	HWND hDlg = GetDlgItem(hWndMain, ID_CONTROLLER_DLG);
 	SendDlgItemMessage(hDlg, idsIcon[n], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(idsStat[status])));
 	SendDlgItemMessage(hDlg, idsCheck[n], BM_SETCHECK, statButton[status], 0);
@@ -143,6 +146,14 @@ void OnUISetControllerStatus(int n, int status)
 	LoadString(hInst, idsStr[status], pbuf, ARRAYSIZE(pbuf));
 	wsprintf(buf, pbuf, n + 1, VConVGetListeningPort(n));
 	SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+	SendDlgItemMessage(hDlg, idsEdit[n], EM_SETREADONLY, status > 0, NULL);
+	HWND hSpin = GetDlgItem(hDlg, idsSpin[n]);
+	LONG_PTR style = GetWindowLongPtr(hSpin, GWL_STYLE);
+	if (status == 0)
+		style = (~WS_DISABLED)&style;
+	else
+		style = WS_DISABLED | style;
+	SetWindowLongPtr(hSpin, GWL_STYLE, style);
 }
 
 void UIReportErrorController(int n, int error)
@@ -291,7 +302,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    InitCommonControls();
 
    hWndMain = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-	   CW_USEDEFAULT, 0, PhyPixelsX(400), PhyPixelsY(300), nullptr, nullptr, hInstance, nullptr);
+	   CW_USEDEFAULT, 0, PhyPixelsX(400), PhyPixelsY(360), nullptr, nullptr, hInstance, nullptr);
 
    if (!hWndMain)
    {
@@ -346,6 +357,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
+			case ID_MENU_JOY:
+				ShellExecuteA(hWnd, "open", "rundll32", "shell32,Control_RunDLL joy.cpl", NULL, SW_SHOW);
+				break;
+			case ID_MENU_INSTRUCTIONS:
+			{
+				HRSRC hRsrc = FindResourceA(NULL, MAKEINTRESOURCEA(IDR_RTF_INSTRUCTIONS), "RTF");
+				DocWindowA(hWnd, (char*)LockResource(LoadResource(NULL, hRsrc)), SizeofResource(NULL, hRsrc));
+			}
+				break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
@@ -355,7 +375,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: 在此处添加使用 hdc 的任何绘图代码...
+            // 在此处添加使用 hdc 的任何绘图代码...
             EndPaint(hWnd, &ps);
         }
         break;
@@ -388,7 +408,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			LoadString(hInst, IDS_STRING_INIT_FAIL, pbuf, ARRAYSIZE(pbuf));
 			wsprintf(buf, pbuf, r);
 		}
-		SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+		SetWindowText(GetDlgItem(hWnd, ID_STATUS_BAR), buf);
+		//获取本机IP
+		char iplist[512];
+		addrinfo*pAinfo = nullptr;
+		gethostname(iplist, ARRAYSIZE(iplist));
+		addrinfo hints = { NULL };
+		hints.ai_family = AF_INET; /* Allow IPv4 */
+		hints.ai_flags = AI_PASSIVE; /* For wildcard IP address */
+		hints.ai_protocol = 0; /* Any protocol */
+		hints.ai_socktype = SOCK_STREAM;
+		getaddrinfo(iplist, NULL, &hints, &pAinfo);
+		iplist[0] = '\0';
+		for (addrinfo *p=pAinfo;p!=nullptr;p=p->ai_next)
+		{
+			char szIp[16];
+			sockaddr_in*addr = (sockaddr_in*)p->ai_addr;
+			inet_ntop(AF_INET, &addr->sin_addr, szIp, ARRAYSIZE(szIp));
+			strcat_s(iplist, szIp);
+			strcat_s(iplist, "\r\n");
+		}
+		freeaddrinfo(pAinfo);
+		SetDlgItemTextA(GetDlgItem(hWnd, ID_CONTROLLER_DLG), IDC_EDIT_IPLIST, iplist);
 	}
 		break;
 	case VCONV_WM_SETCONTROLLERSTATUS:

@@ -175,10 +175,13 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="common.h" />
+    <ClInclude Include="docwindow.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="vconv.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="docwindow.cpp" />
     <ClCompile Include="vconv.cpp" />
     <ClCompile Include="vconvwin.cpp" />
   </ItemGroup>
@@ -195,6 +198,9 @@
     <ProjectReference Include="..\ViGEmClient\src\ViGEmClient.vcxproj">
       <Project>{7db06674-1f4f-464b-8e1c-172e9587f9dc}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="instructions.rtf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

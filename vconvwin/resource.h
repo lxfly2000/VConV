@@ -24,6 +24,9 @@
 #define IDB_BITMAP_OFFLINE              130
 #define IDB_BITMAP1                     131
 #define IDB_BITMAP_LISTEN               131
+#define IDR_RAW1                        134
+#define IDR_RAW_INSTRUCTIONS            134
+#define IDR_RTF_INSTRUCTIONS            134
 #define IDC_EDIT_PORT1                  1000
 #define IDC_SPIN_PORT1                  1001
 #define IDC_CHECK_ENABLE1               1002
@@ -40,6 +43,12 @@
 #define IDC_EDIT_PORT4                  1013
 #define IDC_SPIN_PORT4                  1014
 #define IDC_CHECK_ENABLE4               1015
+#define IDC_EDIT_IP_LIST                1016
+#define IDC_EDIT_IPLIST                 1016
+#define ID_32771                        32771
+#define ID_MENU_JOY                     32772
+#define ID_32773                        32773
+#define ID_MENU_INSTRUCTIONS            32774
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -47,9 +56,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        132
-#define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1005
+#define _APS_NEXT_RESOURCE_VALUE        135
+#define _APS_NEXT_COMMAND_VALUE         32775
+#define _APS_NEXT_CONTROL_VALUE         1017
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
