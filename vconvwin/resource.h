@@ -19,6 +19,7 @@
 #define IDS_STRING_PORT_CONFLICT        110
 #define IDS_STRING_SOCKET_INIT_ERROR    111
 #define IDS_STRING_SOCKET_CREATE_ERROR  112
+#define IDS_STRING_ALERT_DRIVER         113
 #define IDR_MAINFRAME                   128
 #define IDB_BITMAP_ONLINE               129
 #define IDB_BITMAP_OFFLINE              130
@@ -43,7 +44,6 @@
 #define IDC_EDIT_PORT4                  1013
 #define IDC_SPIN_PORT4                  1014
 #define IDC_CHECK_ENABLE4               1015
-#define IDC_EDIT_IP_LIST                1016
 #define IDC_EDIT_IPLIST                 1016
 #define ID_32771                        32771
 #define ID_MENU_JOY                     32772

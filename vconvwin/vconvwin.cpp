@@ -13,6 +13,7 @@
 #include "resource.h"
 #include "vconv.h"
 #include "docwindow.h"
+#include "downloaddriver.h"
 #include "common.h"
 
 #pragma comment(lib,"ComCtl32.lib")
@@ -206,7 +207,7 @@ void OnUIReportErrorController(int n, int error)
 		LoadString(hInst, IDS_STRING_SOCKET_CREATE_ERROR, buf, ARRAYSIZE(buf));
 		break;
 	}
-	MBPrintfW(MB_ICONERROR, NULL, buf, n, VConVGetListeningPort(n));
+	MBPrintfW(MB_ICONERROR, NULL, buf, n + 1, VConVGetListeningPort(n));
 	DlgDisableController(n);
 }
 
@@ -331,6 +332,49 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+void Init(bool downloadDriver)
+{
+	int r = VConVInit();
+	TCHAR buf[32];
+	if (r)
+	{
+		TCHAR pbuf[64];
+		LoadString(hInst, IDS_STRING_INIT_FAIL, pbuf, ARRAYSIZE(pbuf));
+		wsprintf(buf, pbuf, r);
+		SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+		if (r == 0xE0000001 && downloadDriver)
+		{
+			LoadString(hInst, IDS_STRING_ALERT_DRIVER, pbuf, ARRAYSIZE(pbuf));
+			if (MBPrintfW(MB_ICONEXCLAMATION | MB_YESNO, szTitle, pbuf) == IDYES && DownloadDriver(hWndMain) == 0)
+				Init(false);
+		}
+		return;
+	}
+	LoadString(hInst, IDS_STRING_INIT_OK, buf, ARRAYSIZE(buf));
+	SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+	//获取本机IP
+	char iplist[512];
+	addrinfo*pAinfo = nullptr;
+	gethostname(iplist, ARRAYSIZE(iplist));
+	addrinfo hints = { NULL };
+	hints.ai_family = AF_INET; /* Allow IPv4 */
+	hints.ai_flags = AI_PASSIVE; /* For wildcard IP address */
+	hints.ai_protocol = 0; /* Any protocol */
+	hints.ai_socktype = SOCK_STREAM;
+	getaddrinfo(iplist, NULL, &hints, &pAinfo);
+	iplist[0] = '\0';
+	for (addrinfo *p = pAinfo; p != nullptr; p = p->ai_next)
+	{
+		char szIp[16];
+		sockaddr_in*addr = (sockaddr_in*)p->ai_addr;
+		inet_ntop(AF_INET, &addr->sin_addr, szIp, ARRAYSIZE(szIp));
+		strcat_s(iplist, szIp);
+		strcat_s(iplist, "\r\n");
+	}
+	freeaddrinfo(pAinfo);
+	SetDlgItemTextA(GetDlgItem(hWndMain, ID_CONTROLLER_DLG), IDC_EDIT_IPLIST, iplist);
+}
+
 //
 //  函数: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -395,42 +439,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 		break;
 	case WM_SHOWWINDOW:
-	{
-		int r = VConVInit();
-		TCHAR buf[32];
-		if (r == 0)
-		{
-			LoadString(hInst, IDS_STRING_INIT_OK, buf, ARRAYSIZE(buf));
-		}
-		else
-		{
-			TCHAR pbuf[32];
-			LoadString(hInst, IDS_STRING_INIT_FAIL, pbuf, ARRAYSIZE(pbuf));
-			wsprintf(buf, pbuf, r);
-		}
-		SetWindowText(GetDlgItem(hWnd, ID_STATUS_BAR), buf);
-		//获取本机IP
-		char iplist[512];
-		addrinfo*pAinfo = nullptr;
-		gethostname(iplist, ARRAYSIZE(iplist));
-		addrinfo hints = { NULL };
-		hints.ai_family = AF_INET; /* Allow IPv4 */
-		hints.ai_flags = AI_PASSIVE; /* For wildcard IP address */
-		hints.ai_protocol = 0; /* Any protocol */
-		hints.ai_socktype = SOCK_STREAM;
-		getaddrinfo(iplist, NULL, &hints, &pAinfo);
-		iplist[0] = '\0';
-		for (addrinfo *p=pAinfo;p!=nullptr;p=p->ai_next)
-		{
-			char szIp[16];
-			sockaddr_in*addr = (sockaddr_in*)p->ai_addr;
-			inet_ntop(AF_INET, &addr->sin_addr, szIp, ARRAYSIZE(szIp));
-			strcat_s(iplist, szIp);
-			strcat_s(iplist, "\r\n");
-		}
-		freeaddrinfo(pAinfo);
-		SetDlgItemTextA(GetDlgItem(hWnd, ID_CONTROLLER_DLG), IDC_EDIT_IPLIST, iplist);
-	}
+		Init(true);
 		break;
 	case VCONV_WM_SETCONTROLLERSTATUS:
 		OnUISetControllerStatus(wParam, lParam);

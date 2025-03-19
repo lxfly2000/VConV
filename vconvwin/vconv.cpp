@@ -119,6 +119,7 @@ int VConVRelease()
 	WSACleanup();
 	for (int i = 0; i < VCONV_MAX_CONTROLLER; i++)
 		VConVClosePort(i);
+	vigem_disconnect(client);
 	vigem_free(client);
 	return 0;
 }
