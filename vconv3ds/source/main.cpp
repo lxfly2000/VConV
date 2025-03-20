@@ -3,6 +3,8 @@
 #include <ctime>
 #include <vector>
 #include <set>
+#include <algorithm>
+#include <regex>
 
 #include <3ds.h>
 #include <citro3d.h>
@@ -24,6 +26,18 @@ constexpr auto DISPLAY_TRANSFER_FLAGS =
 
 C3D_RenderTarget *s_top = nullptr;
 C3D_RenderTarget *s_bottom = nullptr;
+
+bool running=true;
+bool controller_enabled=false;
+#define SERVER_IP_DEFAULT "192.168.1.2"
+char serverIp[16]=SERVER_IP_DEFAULT;
+int serverPort=32000;
+
+void init_sockets();
+
+void draw_controller();
+void draw_status_bar(ImGuiIO &io,ImGuiStyle &style);
+void draw_vconv_window();
 
 int main(int argc, char *argv[]) {
 	osSetSpeedupEnable(true);
@@ -58,7 +72,9 @@ int main(int argc, char *argv[]) {
 	io.DisplaySize = ImVec2(SCREEN_WIDTH, SCREEN_HEIGHT);
 	io.DisplayFramebufferScale = ImVec2(FB_SCALE, FB_SCALE);
 
-	while (aptMainLoop()) {
+	init_sockets();
+
+	while (running && aptMainLoop()) {
 
 		hidScanInput ();
 		auto const kDown = hidKeysDown ();
@@ -68,27 +84,11 @@ int main(int argc, char *argv[]) {
 		imgui::ctru::newFrame();
 		ImGui::NewFrame();
 
-		// 1. draw current timestamp
-		char timeBuffer[16];
-		auto const now = std::time (nullptr);
-		std::strftime (timeBuffer, sizeof (timeBuffer), "%H:%M:%S", std::localtime (&now));
-		auto const size = ImGui::CalcTextSize (timeBuffer);
-		auto const screenWidth = io.DisplaySize.x;
-		auto const p1 = ImVec2 (screenWidth, 0.0f);
-		auto const p2 = ImVec2 (p1.x - size.x - style.FramePadding.x, style.FramePadding.y);
-		ImGui::GetForegroundDrawList ()->AddText (p2, ImGui::GetColorU32 (ImGuiCol_Text), timeBuffer);
+		ImGui::ShowDemoWindow();
 
-
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		{
-			ImGui::Begin("VConV");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("TODO");               // Display some text (you can use a format strings too)
-			if(ImGui::Button("Exit")){//必须有通过界面上退出的按钮，因为按钮在程序工作时全被占用了
-				break;
-			}
-			ImGui::End();
-		}
+		draw_controller();
+		draw_status_bar(io,style);
+		draw_vconv_window();
 
 		ImGui::Render();
 
@@ -113,4 +113,62 @@ int main(int argc, char *argv[]) {
 	romfsExit();
 
 	return 0;
+}
+
+void init_sockets()
+{
+	//TODO：初始化发送和接收的Socket
+}
+
+void draw_controller()
+{
+	//TODO：绘制控制器状态
+}
+
+void draw_status_bar(ImGuiIO &io,ImGuiStyle &style)
+{
+	// 1. draw current timestamp
+	char timeBuffer[16];
+	auto const now = std::time (nullptr);
+	std::strftime (timeBuffer, sizeof (timeBuffer), "%H:%M:%S", std::localtime (&now));
+	auto const size = ImGui::CalcTextSize (timeBuffer);
+	auto const screenWidth = io.DisplaySize.x;
+	auto const p1 = ImVec2 (screenWidth, 0.0f);
+	auto const p2 = ImVec2 (p1.x - size.x - style.FramePadding.x, style.FramePadding.y);
+	ImGui::GetForegroundDrawList ()->AddText (p2, ImGui::GetColorU32 (ImGuiCol_Text), timeBuffer);
+
+	//TODO：绘制电池状态
+	//TODO：绘制网络状态
+}
+
+void draw_vconv_window()
+{
+	ImGui::SetNextWindowPos(ImVec2(40,240));
+	ImGui::SetNextWindowSize(ImVec2(320,240));
+	ImGuiWindowFlags wf=ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse;
+	ImGui::Begin("VConV",NULL,wf);                          // Create a window called "Hello, world!" and append into it.
+
+	ImGui::Checkbox("Enable Input",&controller_enabled);
+	ImGui::SameLine();
+	if(ImGui::Button("Exit")){//必须有通过界面上退出的按钮，因为按钮在程序工作时全被占用了
+		running=false;
+	}
+	if(ImGui::InputText("Server IP Address",serverIp,std::size(serverIp),ImGuiInputTextFlags_AutoSelectAll)){
+		std::string str=serverIp;
+		std::smatch sm;
+		if(strlen(serverIp)>15||!std::regex_match(str,sm,std::regex("(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)"))){
+			strcpy(serverIp,SERVER_IP_DEFAULT);
+		}else{
+			for(const auto &m:sm){
+				if(atoi(m.str().c_str())>255){
+					strcpy(serverIp,SERVER_IP_DEFAULT);
+					break;
+				}
+			}
+		}
+	}
+	if(ImGui::InputInt("Server Port",&serverPort)){
+		serverPort=std::min(std::max(0,serverPort),65535);
+	}
+	ImGui::End();
 }
