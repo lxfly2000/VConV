@@ -9,6 +9,7 @@
 #include <CommCtrl.h>
 #include <shellapi.h>
 #include <WS2tcpip.h>
+#include <atlstr.h>
 
 #include "resource.h"
 #include "vconv.h"
@@ -18,12 +19,10 @@
 
 #pragma comment(lib,"ComCtl32.lib")
 
-#define MAX_LOADSTRING 100
-
 // 全局变量:
 HINSTANCE hInst;                                // 当前实例
-WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
-WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
+CStringA szTitle;                  // 标题栏文本
+CStringA szWindowClass;            // 主窗口类名
 HWND hWndMain;
 
 // 此代码模块中包含的函数的前向声明:
@@ -43,8 +42,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // 在此处放置代码。
 
     // 初始化全局字符串
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_VCONVWIN, szWindowClass, MAX_LOADSTRING);
+    szTitle.LoadString(hInstance, IDS_APP_TITLE);
+    szWindowClass.LoadString(hInstance, IDC_VCONVWIN);
     MyRegisterClass(hInstance);
 
     // 执行应用程序初始化:
@@ -53,17 +52,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VCONVWIN));
+    HACCEL hAccelTable = LoadAcceleratorsA(hInstance, MAKEINTRESOURCEA(IDC_VCONVWIN));
 
     MSG msg;
 
     // 主消息循环:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (GetMessageA(&msg, nullptr, 0, 0))
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        if (!TranslateAcceleratorA(msg.hwnd, hAccelTable, &msg))
         {
             TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            DispatchMessageA(&msg);
         }
     }
 
@@ -83,7 +82,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
-    WNDCLASSEXW wcex;
+    WNDCLASSEXA wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
@@ -92,14 +91,14 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_VCONVWIN));
+    wcex.hIcon          = LoadIconA(hInstance, MAKEINTRESOURCEA(IDI_VCONVWIN));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_VCONVWIN);
+    wcex.lpszMenuName   = MAKEINTRESOURCEA(IDC_VCONVWIN);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = wcex.hIcon;
 
-    return RegisterClassExW(&wcex);
+    return RegisterClassExA(&wcex);
 }
 
 #define ID_STATUS_BAR 2000
@@ -113,22 +112,22 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 BOOL SavePortConfig(int n, int port)
 {
-	char key[8], szPort[8];
-	wsprintfA(key, "Port%d", n);
-	wsprintfA(szPort, "%d", port);
+	CStringA key, szPort;
+	key.Format("Port%d", n);
+	szPort.Format("%d", port);
 	return WritePrivateProfileStringA(INI_APPNAME, key, szPort, INI_FILE);
 }
 
 WORD ReadPortConfig(int n)
 {
-	char key[8];
-	wsprintfA(key, "Port%d", n);
+	CStringA key;
+	key.Format("Port%d", n);
 	return GetPrivateProfileIntA(INI_APPNAME, key, PORT_DEFAULT + n, INI_FILE);
 }
 
 void UISetControllerStatus(int n, int status)
 {
-	PostMessage(hWndMain, VCONV_WM_SETCONTROLLERSTATUS, n, status);
+	PostMessageA(hWndMain, VCONV_WM_SETCONTROLLERSTATUS, n, status);
 }
 
 void OnUISetControllerStatus(int n, int status)
@@ -140,53 +139,52 @@ void OnUISetControllerStatus(int n, int status)
 	int idsEdit[] = { IDC_EDIT_PORT1,IDC_EDIT_PORT2,IDC_EDIT_PORT3,IDC_EDIT_PORT4 };
 	int idsSpin[] = { IDC_SPIN_PORT1,IDC_SPIN_PORT2,IDC_SPIN_PORT3,IDC_SPIN_PORT4 };
 	HWND hDlg = GetDlgItem(hWndMain, ID_CONTROLLER_DLG);
-	SendDlgItemMessage(hDlg, idsIcon[n], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(idsStat[status])));
-	SendDlgItemMessage(hDlg, idsCheck[n], BM_SETCHECK, statButton[status], 0);
+	SendDlgItemMessageA(hDlg, idsIcon[n], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmapA(hInst, MAKEINTRESOURCEA(idsStat[status])));
+	SendDlgItemMessageA(hDlg, idsCheck[n], BM_SETCHECK, statButton[status], 0);
 	int idsStr[] = { IDS_STRING_CONTROLLER_DISCONNECT,IDS_STRING_CONTROLLER_LISTEN,IDS_STRING_CONTROLLER_DISCONNECT,IDS_STRING_CONTROLLER_CONNECT };
-	TCHAR buf[128], pbuf[128];
-	LoadString(hInst, idsStr[status], pbuf, ARRAYSIZE(pbuf));
-	wsprintf(buf, pbuf, n + 1, VConVGetListeningPort(n));
-	SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
-	SendDlgItemMessage(hDlg, idsEdit[n], EM_SETREADONLY, status > 0, NULL);
+	CStringA buf;
+	buf.Format(idsStr[status], n + 1, VConVGetListeningPort(n));
+	SetWindowTextA(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+	SendDlgItemMessageA(hDlg, idsEdit[n], EM_SETREADONLY, status > 0, NULL);
 	HWND hSpin = GetDlgItem(hDlg, idsSpin[n]);
-	LONG_PTR style = GetWindowLongPtr(hSpin, GWL_STYLE);
+	LONG_PTR style = GetWindowLongPtrA(hSpin, GWL_STYLE);
 	if (status == 0)
 		style = (~WS_DISABLED)&style;
 	else
 		style = WS_DISABLED | style;
-	SetWindowLongPtr(hSpin, GWL_STYLE, style);
+	SetWindowLongPtrA(hSpin, GWL_STYLE, style);
 }
 
 void UIReportErrorController(int n, int error)
 {
-	PostMessage(hWndMain, VCONV_WM_ERRORCONTROLLER, n, error);
+	PostMessageA(hWndMain, VCONV_WM_ERRORCONTROLLER, n, error);
 }
 
 void UIErrorBox(int error)
 {
-	PostMessage(hWndMain, VCONV_WM_ERRORBOX, 0, error);
+	PostMessageA(hWndMain, VCONV_WM_ERRORBOX, 0, error);
 }
 
-int WINAPI MBPrintfW(int iconType, LPCWSTR title, LPCWSTR fmt, ...)
+int WINAPI MBPrintfA(int iconType, LPCSTR title, LPCSTR fmt, ...)
 {
 	va_list va;
-	WCHAR text[4096];
+	CStringA text;
 	va_start(va, fmt);
-	wvsprintfW(text, fmt, va);
+	text.FormatV(fmt, va);
 	va_end(va);
-	return MessageBoxW(hWndMain, text, title, iconType);
+	return MessageBoxA(hWndMain, text, title, iconType);
 }
 
 int OnUIErrorBox(int error)
 {
-	TCHAR buf[32];
+	CStringA buf;
 	switch (error)
 	{
 	case VCONV_ERROR_SOCKET_INIT_ERROR:
-		LoadString(hInst, IDS_STRING_SOCKET_INIT_ERROR, buf, ARRAYSIZE(buf));
+		buf.LoadString(hInst, IDS_STRING_SOCKET_INIT_ERROR);
 		break;
 	}
-	return MBPrintfW(MB_ICONERROR, NULL, buf);
+	return MBPrintfA(MB_ICONERROR, NULL, buf);
 }
 
 void DlgDisableController(int n)
@@ -197,17 +195,17 @@ void DlgDisableController(int n)
 
 void OnUIReportErrorController(int n, int error)
 {
-	TCHAR buf[32];
+	CStringA buf;
 	switch (error)
 	{
 	case VCONV_ERROR_PORT:
-		LoadString(hInst, IDS_STRING_PORT_CONFLICT, buf, ARRAYSIZE(buf));
+		buf.LoadString(hInst, IDS_STRING_PORT_CONFLICT);
 		break;
 	case VCONV_ERROR_SOCKET_CREATE_ERROR:
-		LoadString(hInst, IDS_STRING_SOCKET_CREATE_ERROR, buf, ARRAYSIZE(buf));
+		buf.LoadString(hInst, IDS_STRING_SOCKET_CREATE_ERROR);
 		break;
 	}
-	MBPrintfW(MB_ICONERROR, NULL, buf, n + 1, VConVGetListeningPort(n));
+	MBPrintfA(MB_ICONERROR, NULL, buf, n + 1, VConVGetListeningPort(n));
 	DlgDisableController(n);
 }
 
@@ -227,10 +225,10 @@ INT_PTR CALLBACK ControllerDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 	{
 	case WM_INITDIALOG:
 		//设置编辑框范围
-		SendDlgItemMessage(hWnd, IDC_SPIN_PORT1, UDM_SETRANGE32, 0, 65535);
-		SendDlgItemMessage(hWnd, IDC_SPIN_PORT2, UDM_SETRANGE32, 0, 65535);
-		SendDlgItemMessage(hWnd, IDC_SPIN_PORT3, UDM_SETRANGE32, 0, 65535);
-		SendDlgItemMessage(hWnd, IDC_SPIN_PORT4, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessageA(hWnd, IDC_SPIN_PORT1, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessageA(hWnd, IDC_SPIN_PORT2, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessageA(hWnd, IDC_SPIN_PORT3, UDM_SETRANGE32, 0, 65535);
+		SendDlgItemMessageA(hWnd, IDC_SPIN_PORT4, UDM_SETRANGE32, 0, 65535);
 		//读取存储值
 		SetDlgItemInt(hWnd, IDC_EDIT_PORT1, ReadPortConfig(0), FALSE);
 		SetDlgItemInt(hWnd, IDC_EDIT_PORT2, ReadPortConfig(1), FALSE);
@@ -241,25 +239,25 @@ INT_PTR CALLBACK ControllerDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 		switch (LOWORD(wParam))
 		{
 		case IDC_CHECK_ENABLE1:
-			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE1, BM_GETCHECK, 0, 0) == BST_CHECKED)
+			if (SendDlgItemMessageA(hWnd, IDC_CHECK_ENABLE1, BM_GETCHECK, 0, 0) == BST_CHECKED)
 				DlgDisableController(0);
 			else
 				DlgEnableController(0, GetDlgItemInt(hWnd, IDC_EDIT_PORT1, NULL, FALSE));
 			break;
 		case IDC_CHECK_ENABLE2:
-			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE2, BM_GETCHECK, 0, 0) == BST_CHECKED)
+			if (SendDlgItemMessageA(hWnd, IDC_CHECK_ENABLE2, BM_GETCHECK, 0, 0) == BST_CHECKED)
 				DlgDisableController(1);
 			else
 				DlgEnableController(1, GetDlgItemInt(hWnd, IDC_EDIT_PORT2, NULL, FALSE));
 			break;
 		case IDC_CHECK_ENABLE3:
-			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE3, BM_GETCHECK, 0, 0) == BST_CHECKED)
+			if (SendDlgItemMessageA(hWnd, IDC_CHECK_ENABLE3, BM_GETCHECK, 0, 0) == BST_CHECKED)
 				DlgDisableController(2);
 			else
 				DlgEnableController(2, GetDlgItemInt(hWnd, IDC_EDIT_PORT3, NULL, FALSE));
 			break;
 		case IDC_CHECK_ENABLE4:
-			if (SendDlgItemMessage(hWnd, IDC_CHECK_ENABLE4, BM_GETCHECK, 0, 0) == BST_CHECKED)
+			if (SendDlgItemMessageA(hWnd, IDC_CHECK_ENABLE4, BM_GETCHECK, 0, 0) == BST_CHECKED)
 				DlgDisableController(3);
 			else
 				DlgEnableController(3, GetDlgItemInt(hWnd, IDC_EDIT_PORT4, NULL, FALSE));
@@ -302,18 +300,18 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    InitCommonControls();
 
-   hWndMain = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-	   CW_USEDEFAULT, 0, PhyPixelsX(400), PhyPixelsY(360), nullptr, nullptr, hInstance, nullptr);
+   hWndMain = CreateWindowA(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+	   CW_USEDEFAULT, 0, PhyPixelsX(440), PhyPixelsY(400), nullptr, nullptr, hInstance, nullptr);
 
    if (!hWndMain)
    {
       return FALSE;
    }
 
-   HWND hStatusBar = CreateWindowEx(
+   HWND hStatusBar = CreateWindowExA(
 	   WS_EX_TOPMOST,                       // no extended styles
-	   STATUSCLASSNAME,         // name of status bar class
-	   (PCTSTR)NULL,           // no text when first created
+	   STATUSCLASSNAMEA,         // name of status bar class
+	   "",           // no text when first created
 	   SBARS_SIZEGRIP |         // includes a sizing grip
 	   WS_CHILD | WS_VISIBLE,   // creates a visible child window
 	   0, 0, 0, 0,              // ignores size and position
@@ -322,8 +320,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   hInst,                   // handle to application instance
 	   NULL);
 
-   HWND hDlg = CreateDialog(hInst, MAKEINTRESOURCE(IDD_CONTROLLER_STAT), hWndMain, ControllerDlgProc);
-   SetWindowLongPtr(hDlg, GWLP_ID, ID_CONTROLLER_DLG);
+   HWND hDlg = CreateDialogA(hInst, MAKEINTRESOURCEA(IDD_CONTROLLER_STAT), hWndMain, ControllerDlgProc);
+   SetWindowLongPtrA(hDlg, GWLP_ID, ID_CONTROLLER_DLG);
    ShowWindow(hDlg, nCmdShow);
 
    ShowWindow(hWndMain, nCmdShow);
@@ -335,25 +333,23 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 void Init(bool downloadDriver)
 {
 	int r = VConVInit();
-	TCHAR buf[32];
+	CStringA buf;
 	if (r)
 	{
-		TCHAR pbuf[64];
-		LoadString(hInst, IDS_STRING_INIT_FAIL, pbuf, ARRAYSIZE(pbuf));
-		wsprintf(buf, pbuf, r);
-		SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+		buf.Format(IDS_STRING_INIT_FAIL, r);
+		SetWindowTextA(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
 		if (r == 0xE0000001 && downloadDriver)
 		{
-			LoadString(hInst, IDS_STRING_ALERT_DRIVER, pbuf, ARRAYSIZE(pbuf));
-			if (MBPrintfW(MB_ICONEXCLAMATION | MB_YESNO, szTitle, pbuf) == IDYES && DownloadDriver(hWndMain) == 0)
+			buf.LoadString(hInst, IDS_STRING_ALERT_DRIVER);
+			if (MBPrintfA(MB_ICONEXCLAMATION | MB_YESNO, szTitle, buf) == IDYES && DownloadDriver(hWndMain) == 0)
 				Init(false);
 		}
 		return;
 	}
-	LoadString(hInst, IDS_STRING_INIT_OK, buf, ARRAYSIZE(buf));
-	SetWindowText(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
+	buf.LoadString(hInst, IDS_STRING_INIT_OK);
+	SetWindowTextA(GetDlgItem(hWndMain, ID_STATUS_BAR), buf);
 	//获取本机IP
-	char iplist[512];
+	char iplist[256];
 	addrinfo*pAinfo = nullptr;
 	gethostname(iplist, ARRAYSIZE(iplist));
 	addrinfo hints = { NULL };
@@ -396,7 +392,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                DialogBoxA(hInst, MAKEINTRESOURCEA(IDD_ABOUTBOX), hWnd, About);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -411,7 +407,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 				break;
             default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
+                return DefWindowProcA(hWnd, message, wParam, lParam);
             }
         }
         break;
@@ -451,7 +447,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		OnUIErrorBox(lParam);
 		break;
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProcA(hWnd, message, wParam, lParam);
     }
     return 0;
 }

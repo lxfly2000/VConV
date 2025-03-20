@@ -25,25 +25,25 @@ LONG SetProgressDialogBarValue(int percentage)
 	HWND hpg = GetDlgItem(hwndDialog, IDC_PROGRESS_MAIN);
 	if (percentage == -1)
 	{
-		LONG s = GetWindowLongPtr(hpg, GWL_STYLE);
+		LONG s = GetWindowLongPtrA(hpg, GWL_STYLE);
 		if (!(s & PBS_MARQUEE))
 		{
 			s |= PBS_MARQUEE;
-			SetWindowLongPtr(hpg, GWL_STYLE, s);
-			SendDlgItemMessage(hwndDialog, IDC_PROGRESS_MAIN, PBM_SETMARQUEE, TRUE, 0);
+			SetWindowLongPtrA(hpg, GWL_STYLE, s);
+			SendDlgItemMessageA(hwndDialog, IDC_PROGRESS_MAIN, PBM_SETMARQUEE, TRUE, 0);
 		}
 	}
 	else
 	{
-		LONG s = GetWindowLongPtr(hpg, GWL_STYLE);
+		LONG s = GetWindowLongPtrA(hpg, GWL_STYLE);
 		if (s & PBS_MARQUEE)
 		{
 			s &= ~PBS_MARQUEE;
-			SetWindowLongPtr(hpg, GWL_STYLE, s);
-			SendDlgItemMessage(hwndDialog, IDC_PROGRESS_MAIN, PBM_SETMARQUEE, FALSE, 0);
+			SetWindowLongPtrA(hpg, GWL_STYLE, s);
+			SendDlgItemMessageA(hwndDialog, IDC_PROGRESS_MAIN, PBM_SETMARQUEE, FALSE, 0);
 		}
 	}
-	return SendDlgItemMessage(hwndDialog, IDC_PROGRESS_MAIN, PBM_SETPOS, percentage, 0);
+	return SendDlgItemMessageA(hwndDialog, IDC_PROGRESS_MAIN, PBM_SETPOS, percentage, 0);
 }
 
 BOOL EndProgressDialog(int retCode)
@@ -59,7 +59,7 @@ INT_PTR WINAPI ProgressDialogCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM
 		hwndDialog = hDlg;
 		if (pp.strCancel)
 			SetDlgItemTextA(hDlg, IDCANCEL, pp.strCancel);
-		SendDlgItemMessage(hDlg, IDC_PROGRESS_MAIN, PBM_SETRANGE, 0, MAKELPARAM(pp.pgMin, pp.pgMax));
+		SendDlgItemMessageA(hDlg, IDC_PROGRESS_MAIN, PBM_SETRANGE, 0, MAKELPARAM(pp.pgMin, pp.pgMax));
 		SetProgressDialogBarValue(0);
 		break;
 	case WM_SHOWWINDOW:
@@ -82,7 +82,7 @@ INT_PTR WINAPI ProgressDialogCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM
 HRESULT ProgressDialog(HWND hwndParent, LPCSTR strCancel)
 {
 	pp.strCancel = strCancel;
-	return DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_PROGRESS), hwndParent, ProgressDialogCallback);
+	return DialogBoxA(NULL, MAKEINTRESOURCEA(IDD_DIALOG_PROGRESS), hwndParent, ProgressDialogCallback);
 }
 
 void ProgressSetOnClickCancel(void(*fCallback)())

@@ -100,7 +100,7 @@ void Subthread_Download()
 {
 	LPCSTR tURL = driverURL;
 	retFileName = strrchr(tURL, '/') + 1;
-	std::string title = "正在下载：";
+	std::string title = "Downloading: ";
 	title.append(retFileName);
 	SetProgressDialogTitle(title.c_str());
 	dcb.downloadStatus = 1;
@@ -109,7 +109,7 @@ void Subthread_Download()
 	if (URLDownloadToCacheFileA(NULL, tURL, retFilePath, ARRAYSIZE(retFilePath) - 1, 0, &dcb) == S_OK)
 	{
 		ProgressSetEnableClose(FALSE);
-		title = "正在安装：";
+		title = "Installing: ";
 		title.append(retFileName);
 		SetProgressDialogTitle(title.c_str());
 		SetProgressDialogBarValue(-1);
@@ -152,15 +152,13 @@ int DownloadDriver(HWND hwnd)
 	{
 		tSub = std::thread(Subthread_Download);
 	});
-	switch (ProgressDialog(hwnd, "取消(&C)"))
+	switch (ProgressDialog(hwnd, "&Cancel"))
 	{
 	case E_ABORT:
-		MessageBoxA(hwnd, "下载被中断，您需要稍后手动下载驱动以完成安装。\n"
-			"Download was interrupted, please download this driver manually later to finish setup.", retFileName, MB_ICONEXCLAMATION);
+		MessageBoxA(hwnd, "Download was interrupted, please download this driver manually later to finish setup.", retFileName, MB_ICONEXCLAMATION);
 		break;
 	case 0x570:
-		MessageBoxA(hwnd, "下载的文件不完整或无法读取，您需要稍后手动下载驱动以完成安装。\n"
-			"File corrupted or unable to read, please download this driver manually later to finish setup.", retFileName, MB_ICONEXCLAMATION);
+		MessageBoxA(hwnd, "File corrupted or unable to read, please download this driver manually later to finish setup.", retFileName, MB_ICONEXCLAMATION);
 		break;
 	case 1641:
 		//程序要求重新启动系统

@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <Richedit.h>
+#include <atlstr.h>
 
 #include "docwindow.h"
 #include "common.h"
@@ -30,8 +31,8 @@ DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie,
 
 void CreateDocWindow(HWND hwnd)
 {
-	LoadLibrary(TEXT("Msftedit.dll"));
-	HWND hDoc = CreateWindow(MSFTEDIT_CLASS, TEXT("Document"), ES_MULTILINE | ES_READONLY | WS_HSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
+	LoadLibraryA("riched20.dll");
+	HWND hDoc = CreateWindowA(RICHEDIT_CLASSA, "Document", ES_MULTILINE | ES_READONLY | WS_HSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
 		0, 0, CW_USEDEFAULT, 0, hwnd, (HMENU)ID_CONTROL_DOC, NULL, NULL);
 	SetFocus(hDoc);
 
@@ -39,7 +40,7 @@ void CreateDocWindow(HWND hwnd)
 	es.pfnCallback = EditStreamCallback;
 	es.dwCookie = (DWORD_PTR)pDoc;
 	docPos = 0;
-	SendMessage(hDoc, EM_STREAMIN, SF_RTF, (LPARAM)&es);
+	SendMessageA(hDoc, EM_STREAMIN, SF_RTF, (LPARAM)&es);
 }
 
 void DestroyDocWindow(HWND hwnd)
@@ -86,16 +87,17 @@ void DocWindowA(HWND hWndParent, char * doc, int length)
 	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	RegisterClassA(&wc);
-	char title[32];
-	GetWindowTextA(hWndParent, title, ARRAYSIZE(title));
+	CStringA title;
+	title.Preallocate(GetWindowTextLengthA(hWndParent));
+	GetWindowTextA(hWndParent, title.GetBuffer(), title.GetAllocLength());
 	HWND hwnd = CreateWindowA(wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, PhyPixelsX(800), PhyPixelsY(600), NULL, NULL, wc.hInstance, NULL);
 	ShowWindow(hwnd, SW_SHOW);
 	InvalidateRect(hwnd, NULL, FALSE);
 	UpdateWindow(hwnd);
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0))
+	while (GetMessageA(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		DispatchMessageA(&msg);
 	}
 }
