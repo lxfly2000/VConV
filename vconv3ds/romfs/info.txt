@@ -1,0 +1,2 @@
+You've successfully read the text file!
+This is an LF end. This is an LF end. This is an LF end.

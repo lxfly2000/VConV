@@ -1,0 +1,20 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "binaryPath": "D:\\citra\\head\\citra-qt.exe",
+            "binaryArgs": ["${workspaceFolder}\\3dsdemo.3dsx"],
+            "MIMode": "gdb",
+            "miDebuggerPath": "D:\\devkitPro\\devkitARM\\bin\\arm-none-eabi-gdb.exe"
+        }
+    ],
+    "files.associations": {
+        "citro2d.h": "c",
+        "sdl_main.h": "c",
+        "stdio.h": "c",
+        "cstdlib": "c",
+        "vector": "c",
+        "cstring": "cpp",
+        "stdlib.h": "c"
+    }
+}

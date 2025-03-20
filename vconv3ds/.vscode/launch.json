@@ -1,0 +1,32 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/${workspaceFolderBasename}.elf",
+            "targetArchitecture": "arm",
+            "preLaunchTask": "deploy",
+            "postDebugTask": "",
+            "serverLaunchTimeout": 10000,
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "D:\\devkitPro\\devkitARM\\bin\\arm-none-eabi-gdb.exe",
+            "miDebuggerServerAddress": "192.168.1.8:4003",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "file ${workspaceFolder}/${workspaceFolderBasename}.elf -enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,43 @@
+{
+    "configurations": [
+        {
+            "name": "3DS",
+            "forcedInclude": [
+                "${workspaceFolder}\\include\\vscode_fix.h"
+            ],
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}\\include\\**",
+                "${workspaceFolder}\\build\\**",
+                "${workspaceFolder}\\external\\imgui\\**",
+                "${workspaceFolder}\\external\\imgui_citro3d\\**",
+                "D:\\devkitPro\\libctru\\include\\**",
+                "D:\\devkitPro\\devkitARM\\arm-none-eabi\\include\\**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "_UNICODE",
+                "__3DS__",
+                "IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1",
+                "IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS=1"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "${workspaceFolder}\\include\\**",
+                    "${workspaceFolder}\\build\\**",
+                    "${workspaceFolder}\\external\\imgui\\**",
+                    "${workspaceFolder}\\external\\imgui_citro3d\\**",
+                    "D:\\devkitPro\\libctru\\include\\**",
+                    "D:\\devkitPro\\devkitARM\\arm-none-eabi\\include\\**"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            },
+            "cStandard": "c11",
+            "cppStandard": "c++20",
+            "compilerPath": "D:\\devkitPro\\devkitARM\\bin\\arm-none-eabi-g++.exe"
+        }
+    ],
+    "version": 4
+}

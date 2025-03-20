@@ -1,0 +1,116 @@
+
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "make debug",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "DEBUG=1"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "make release",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "DEBUG=0"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean",
+            "type": "process",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "run debug",
+            "type": "shell",
+            "dependsOn": [
+                "make debug"
+            ],
+            "isBackground": false,
+            "command": "D:\\citra\\head\\citra-qt.exe",
+            "args": [
+                "${workspaceFolder}/${workspaceFolderBasename}.3dsx"
+            ],
+            "presentation": {
+                "clear": true,
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "run release",
+            "type": "shell",
+            "dependsOn": [
+                "make release"
+            ],
+            "isBackground": false,
+            "command": "D:\\citra\\head\\citra-qt.exe",
+            "args": [
+                "${workspaceFolder}/${workspaceFolderBasename}.3dsx"
+            ],
+            "presentation": {
+                "clear": true,
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "gdb-debug",
+            "type": "shell",
+            "dependsOn": [
+                "make debug"
+            ],
+            "isBackground": false,
+            "command": "D:\\citra\\head\\citra.exe",
+            "args": [
+                "--gdbport=20000",
+                "${workspaceFolder}/${workspaceFolderBasename}.3dsx"
+            ],
+            "presentation": {
+                "clear": true,
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "stop-emulation",
+            "type": "shell",
+            "command": "taskkill",
+            "args": [
+                "/FI",
+                "imagename eq citra*"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "deploy",
+            "type": "shell",
+            "dependsOn": [
+                "make debug"
+            ],
+            "isBackground": false,
+            "command": "D:\\devkitPro\\tools\\bin\\3dslink.exe",
+            "args": [
+                "${workspaceFolder}/${workspaceFolderBasename}.3dsx",
+                "-a",
+                "192.168.1.8"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
