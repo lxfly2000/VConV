@@ -1,6 +1,7 @@
 #include "vconv.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -91,7 +92,28 @@ void vconv_send()
     auto keysheld=keysHeld();
     circlePosition padPos={0,0};
     circlePosition csPos={0,0};
-    if(USED_BUTTON_BITS(keysdown)){
-        //TODO
+    for(int i=0;i<32;i++){
+        if((1<<i)&keysdown&USED_BUTTON_BITS){
+            int keycode3DS=i+1;
+            int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[i+1]]];
+            int value3DS=1;
+            int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)/
+                (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)*
+                (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)+
+                keycodes_xbox[keycodeXbox].value_range_start;
+            unsigned char senddata[4]={keycodeXbox,0};
+            memcpy(senddata+1,&valueXbox,keycodes_xbox[keycodeXbox].value_length);
+        }
+        if((1<<i)&keysup&USED_BUTTON_BITS){
+            int keycode3DS=i+1;
+            int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[i+1]]];
+            int value3DS=0;
+            int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)/
+                (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)*
+                (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)+
+                keycodes_xbox[keycodeXbox].value_range_start;
+            unsigned char senddata[4]={keycodeXbox,0};
+            memcpy(senddata+1,&valueXbox,keycodes_xbox[keycodeXbox].value_length);
+        }
     }
 }
