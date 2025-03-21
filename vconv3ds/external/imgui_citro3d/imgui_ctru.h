@@ -1,4 +1,7 @@
-// copied from ftpd
+// ftpd is a server implementation based on the following:
+// - RFC  959 (https://tools.ietf.org/html/rfc959)
+// - RFC 3659 (https://tools.ietf.org/html/rfc3659)
+// - suggested implementation details from https://cr.yp.to/ftp/filesystem.html
 //
 // The MIT License (MIT)
 //
@@ -24,8 +27,7 @@
 
 #pragma once
 
-#include <3ds.h>
-
+#ifndef CLASSIC
 namespace imgui
 {
 namespace ctru
@@ -37,3 +39,4 @@ bool init ();
 void newFrame ();
 }
 }
+#endif

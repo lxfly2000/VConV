@@ -1,8 +1,11 @@
-// copied from ftpd
+// ftpd is a server implementation based on the following:
+// - RFC  959 (https://tools.ietf.org/html/rfc959)
+// - RFC 3659 (https://tools.ietf.org/html/rfc3659)
+// - suggested implementation details from https://cr.yp.to/ftp/filesystem.html
 //
 // The MIT License (MIT)
 //
-// Copyright (C) 2020 Michael Theall
+// Copyright (C) 2024 Michael Theall
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +25,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#ifndef CLASSIC
 #include "imgui_ctru.h"
 
-#include "imgui.h"
-#include "imgui_internal.h"
+#include <imgui.h>
+
+#include <imgui_internal.h>
+
+#include <3ds.h>
 
 #include <chrono>
 #include <cstring>
 #include <functional>
 #include <string>
 #include <tuple>
-#include <cstdint>
-#include <chrono>
 using namespace std::chrono_literals;
+
+#undef keysDown
+#undef keysUp
 
 namespace
 {
@@ -42,19 +50,19 @@ namespace
 std::string s_clipboard;
 
 /// \brief Get clipboard text callback
-/// \param userData_ User data
-char const *getClipboardText (ImGuiContext *const userData_)
+/// \param context_ ImGui context
+char const *getClipboardText (ImGuiContext *const context_)
 {
-	(void)userData_;
+	(void)context_;
 	return s_clipboard.c_str ();
 }
 
 /// \brief Set clipboard text callback
-/// \param userData_ User data
+/// \param context_ ImGui context
 /// \param text_ Clipboard text
-void setClipboardText (ImGuiContext *const userData_, char const *const text_)
+void setClipboardText (ImGuiContext *const context_, char const *const text_)
 {
-	(void)userData_;
+	(void)context_;
 	s_clipboard = text_;
 }
 
@@ -93,38 +101,42 @@ void updateTouch (ImGuiIO &io_)
 void updateGamepads (ImGuiIO &io_)
 {
 	auto const buttonMapping = {
-	    std::make_pair (KEY_A, ImGuiKey_GamepadFaceDown),  // A and B are swapped,
-	    std::make_pair (KEY_B, ImGuiKey_GamepadFaceRight), // this is more intuitive
-	    std::make_pair (KEY_X, ImGuiKey_GamepadFaceUp),
-	    std::make_pair (KEY_Y, ImGuiKey_GamepadFaceLeft),
-	    std::make_pair (KEY_L, ImGuiKey_GamepadL1),
-	    std::make_pair (KEY_ZL, ImGuiKey_GamepadL1),
-	    std::make_pair (KEY_ZR, ImGuiKey_GamepadR1),
-	    std::make_pair (KEY_R, ImGuiKey_GamepadR1),
-	    std::make_pair (KEY_DUP, ImGuiKey_GamepadDpadUp),
+	    // clang-format off
+	    std::make_pair (KEY_A,      ImGuiKey_GamepadFaceDown),  // A and B are swapped
+	    std::make_pair (KEY_B,      ImGuiKey_GamepadFaceRight), // this is more intuitive
+	    std::make_pair (KEY_X,      ImGuiKey_GamepadFaceUp),
+	    std::make_pair (KEY_Y,      ImGuiKey_GamepadFaceLeft),
+	    std::make_pair (KEY_L,      ImGuiKey_GamepadL1),
+	    std::make_pair (KEY_ZL,     ImGuiKey_GamepadL1),
+	    std::make_pair (KEY_R,      ImGuiKey_GamepadR1),
+	    std::make_pair (KEY_ZR,     ImGuiKey_GamepadR1),
+	    std::make_pair (KEY_DUP,    ImGuiKey_GamepadDpadUp),
 	    std::make_pair (KEY_DRIGHT, ImGuiKey_GamepadDpadRight),
-	    std::make_pair (KEY_DDOWN, ImGuiKey_GamepadDpadDown),
-	    std::make_pair (KEY_DLEFT, ImGuiKey_GamepadDpadLeft),
+	    std::make_pair (KEY_DDOWN,  ImGuiKey_GamepadDpadDown),
+	    std::make_pair (KEY_DLEFT,  ImGuiKey_GamepadDpadLeft),
+	    // clang-format on
 	};
 
 	// read buttons from 3DS
-	auto const keys_up = hidKeysUp ();
-	auto const keys_down = hidKeysDown ();
+	auto const keysDown = hidKeysDown ();
+	auto const keysUp   = hidKeysUp ();
 	for (auto const &[in, out] : buttonMapping)
 	{
-		if (keys_up & in)
-			io_.AddKeyEvent(out, false);
-		if (keys_down & in)
-			io_.AddKeyEvent(out, true);
+		if (keysUp & in)
+			io_.AddKeyEvent (out, false);
+		else if (keysDown & in)
+			io_.AddKeyEvent (out, true);
 	}
 
 	// update joystick
 	circlePosition cpad;
 	auto const analogMapping = {
-	    std::make_tuple (std::ref (cpad.dx), ImGuiKey_GamepadLStickLeft, -0.3f, -0.9f),
+	    // clang-format off
+	    std::make_tuple (std::ref (cpad.dx), ImGuiKey_GamepadLStickLeft,  -0.3f, -0.9f),
 	    std::make_tuple (std::ref (cpad.dx), ImGuiKey_GamepadLStickRight, +0.3f, +0.9f),
-	    std::make_tuple (std::ref (cpad.dy), ImGuiKey_GamepadLStickUp, +0.3f, +0.9f),
-	    std::make_tuple (std::ref (cpad.dy), ImGuiKey_GamepadLStickDown, -0.3f, -0.9f),
+	    std::make_tuple (std::ref (cpad.dy), ImGuiKey_GamepadLStickUp,    +0.3f, +0.9f),
+	    std::make_tuple (std::ref (cpad.dy), ImGuiKey_GamepadLStickDown,  -0.3f, -0.9f),
+	    // clang-format on
 	};
 
 	// read left joystick from circle pad
@@ -132,7 +144,7 @@ void updateGamepads (ImGuiIO &io_)
 	for (auto const &[in, out, min, max] : analogMapping)
 	{
 		auto const value = std::clamp ((in / 156.0f - min) / (max - min), 0.0f, 1.0f);
-		io_.AddKeyAnalogEvent(out, value > 0.1f, value);
+		io_.AddKeyAnalogEvent (out, value > 0.1f, value);
 	}
 }
 
@@ -188,33 +200,6 @@ void updateKeyboard (ImGuiIO &io_)
 }
 }
 
-struct n3ds_clock
-{
-	/// \brief Type representing number of ticks
-	using rep = uint64_t;
-
-	/// \brief Type representing ratio of clock period in seconds
-	using period = std::ratio<1, SYSCLOCK_ARM11>;
-
-	/// \brief Duration type
-	using duration = std::chrono::duration<rep, period>;
-
-	/// \brief Timestamp type
-	using time_point = std::chrono::time_point<n3ds_clock>;
-
-	/// \brief Whether clock is steady
-	constexpr static bool is_steady = true;
-
-	/// \brief Current timestamp
-	static time_point now () noexcept;
-};
-
-inline n3ds_clock::time_point n3ds_clock::now () noexcept
-{
-	return time_point (duration (svcGetSystemTick ()));
-}
-
-
 bool imgui::ctru::init ()
 {
 	auto &io = ImGui::GetIO ();
@@ -236,8 +221,33 @@ bool imgui::ctru::init ()
 	platformIO.Platform_SetClipboardTextFn = &setClipboardText;
 	platformIO.Platform_GetClipboardTextFn = &getClipboardText;
 	platformIO.Platform_ClipboardUserData  = nullptr;
+
 	return true;
 }
+
+struct steady_clock
+{
+	/// \brief Type representing number of ticks
+	using rep = std::uint64_t;
+
+	/// \brief Type representing ratio of clock period in seconds
+	using period = std::ratio<1, SYSCLOCK_ARM11>;
+
+	/// \brief Duration type
+	using duration = std::chrono::duration<rep, period>;
+
+	/// \brief Timestamp type
+	using time_point = std::chrono::time_point<steady_clock>;
+
+	/// \brief Whether clock is steady
+	constexpr static bool is_steady = true;
+
+	/// \brief Current timestamp
+	static time_point now () noexcept
+	{
+		return time_point (duration (svcGetSystemTick ()));
+	}
+};
 
 void imgui::ctru::newFrame ()
 {
@@ -249,9 +259,9 @@ void imgui::ctru::newFrame ()
 	           "to renderer _NewFrame() function?");
 
 	// time step
-	static auto const start = n3ds_clock::now ();
+	static auto const start = steady_clock::now();
 	static auto prev        = start;
-	auto const now          = n3ds_clock::now ();
+	auto const now          = steady_clock::now ();
 
 	io.DeltaTime = std::chrono::duration<float> (now - prev).count ();
 	prev         = now;
@@ -260,3 +270,4 @@ void imgui::ctru::newFrame ()
 	updateGamepads (io);
 	updateKeyboard (io);
 }
+#endif
