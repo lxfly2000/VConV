@@ -1,4 +1,23 @@
 #pragma once
 
-//存储映射按键的索引
+#include <string>
+
+#define SERVER_IP_DEFAULT "192.168.1.2"
+
+//存储used_keycodes_3ds到used_keycodes_xbox的索引
 extern int button_mapping_3ds_xbox[18];
+extern std::string serverIp;
+extern unsigned short serverPort;
+extern std::string error_msg;
+
+bool vconv_init();
+bool vconv_release();
+
+void vconv_send();
+
+void update_sockets_config();
+
+bool read_settings();
+bool save_settings();
+
+extern bool controller_enabled;

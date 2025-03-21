@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <ctime>
 #include <string>
+#include <arpa/inet.h>
 
 #include <3ds.h>
 #include <citro3d.h>
@@ -29,18 +30,10 @@ C3D_RenderTarget *s_bottom = nullptr;
 void *s_depthStencil = nullptr;
 
 bool running=true;
-bool controller_enabled=false;
-#define SERVER_IP_DEFAULT "192.168.1.2"
-std::string serverIp=SERVER_IP_DEFAULT;
-u16 serverPort=32000;
-
-void init_sockets();
 
 void draw_controller();
 void draw_status_bar();
 void draw_vconv_window();
-void read_settings();
-void save_settings();
 
 int main(int argc, char *argv[]) {
 	osSetSpeedupEnable(true);
@@ -88,9 +81,7 @@ int main(int argc, char *argv[]) {
 	io.DisplaySize = ImVec2(SCREEN_WIDTH, SCREEN_HEIGHT);
 	io.DisplayFramebufferScale = ImVec2(FB_SCALE, FB_SCALE);
 
-	init_sockets();
-
-	read_settings();
+	vconv_init();
 
 	while (running && aptMainLoop()) {
 
@@ -115,9 +106,11 @@ int main(int argc, char *argv[]) {
 		imgui::citro3d::render(s_left,s_right, s_bottom);
 
 		C3D_FrameEnd(0);
+
+		vconv_send();
 	}
 	
-	save_settings();
+	vconv_release();
 
 	imgui::citro3d::exit();
 	ImGui::DestroyContext();
@@ -132,11 +125,6 @@ int main(int argc, char *argv[]) {
 	romfsExit();
 
 	return 0;
-}
-
-void init_sockets()
-{
-	//TODO：初始化发送和接收的Socket
 }
 
 void draw_controller()
@@ -157,6 +145,8 @@ void draw_status_bar()
 	auto const p1 = ImVec2 (screenWidth, 0.0f);
 	auto const p2 = ImVec2 (p1.x - size.x - style.FramePadding.x, style.FramePadding.y);
 	ImGui::GetForegroundDrawList ()->AddText (p2, ImGui::GetColorU32 (ImGuiCol_Text), timeBuffer);
+	ImGui::GetForegroundDrawList()->AddText(ImVec2(0,io.DisplaySize.y/2-ImGui::GetTextLineHeight()),
+	ImGui::GetColorU32(ImGuiCol_Text),error_msg.c_str());
 
 	//TODO：绘制电池状态
 	//TODO：绘制网络状态
@@ -174,6 +164,7 @@ void draw_vconv_window()
 		ImGuiIO&io=ImGui::GetIO();
 		if(controller_enabled){
 			io.ConfigFlags|=ImGuiConfigFlags_NoKeyboard;
+			update_sockets_config();
 		}else{
 			io.ConfigFlags=(~ImGuiConfigFlags_NoKeyboard)&io.ConfigFlags;
 		}
@@ -185,8 +176,12 @@ void draw_vconv_window()
 	ImGui::Text("IP");
 	ImGui::SameLine();
 	if(ImGui::Button(serverIp.c_str(),ImVec2(150,0))){
-		if(get_text_input(serverIp,serverIp)){
-			//TODO:更新设置
+		std::string newIp;
+		if(get_text_input(serverIp,newIp)){
+			auto ip=inet_addr(newIp.c_str());
+			if(ip!=INADDR_ANY&&ip!=INADDR_NONE){
+				serverIp=newIp;
+			}
 		}
 	}
 	ImGui::SameLine();
@@ -233,14 +228,4 @@ void draw_vconv_window()
 		ImGui::EndTable();
 	}
 	ImGui::End();
-}
-
-void read_settings()
-{
-	//
-}
-
-void save_settings()
-{
-	//
 }

@@ -71,26 +71,27 @@ const KEYCODE keycodes_xbox[23]={
 };
 
 const int index_used_keycodes_3ds[18]={1,2,3,4,5,6,7,8,9,10,11,12,15,16,33,34,35,36};
+const int keycodes_3ds_to_index_used[37]={-1,0,1,2,3,4,5,6,7,8,9,10,11,-1,-1,12,13,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,14,15,16,17};
 const int index_used_keycodes_xbox[21]={0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,18,19,20,21,22};
 
-int keystatus_3ds_by_keycode(unsigned char k)
+int keystatus_3ds_by_keycode(unsigned char vconv_key)
 {
-	if(k==0){
+	if(vconv_key==0){
 		return 0;
-	}else if(k<=32){
-		return (keysHeld()&(1<<(k-1)))?1:0;
-	}else if(k<=34){
+	}else if(vconv_key<=32){
+		return (keysHeld()&(1<<(vconv_key-1)))?1:0;
+	}else if(vconv_key<=34){
 		circlePosition cp;
 		circleRead(&cp);
-		if(k==33){
+		if(vconv_key==33){
 			return cp.dx;
 		}else{
 			return cp.dy;
 		}
-	}else if(k<=36){
+	}else if(vconv_key<=36){
 		circlePosition cp;
 		hidCstickRead(&cp);
-		if(k==35){
+		if(vconv_key==35){
 			return cp.dx;
 		}else{
 			return cp.dy;
