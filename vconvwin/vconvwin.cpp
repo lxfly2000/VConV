@@ -40,6 +40,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // 在此处放置代码。
+	LoadLibraryA("Riched20.dll");
 
     // 初始化全局字符串
     szTitle.LoadString(hInstance, IDS_APP_TITLE);
@@ -459,7 +460,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+		return (INT_PTR)TRUE;
+
+	case WM_SHOWWINDOW:
+	{
+		CStringA buf;
+		buf.LoadString(IDS_STRING_ABOUT);
+		SetRichEditTextA(GetDlgItem(hDlg, IDC_RICHEDIT2_ABOUT), buf);
+		break;
+	}
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
@@ -469,5 +478,5 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     }
-    return (INT_PTR)FALSE;
+    return OnRichEditClickMsg(hDlg, message, wParam, lParam);
 }

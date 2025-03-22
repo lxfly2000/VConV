@@ -39,6 +39,7 @@ void draw_vconv_window();
 int main(int argc, char *argv[]) {
 	osSetSpeedupEnable(true);
 	romfsInit();
+	ptmuInit();
 
 	gfxInitDefault();
 
@@ -125,6 +126,7 @@ int main(int argc, char *argv[]) {
 	vramFree(s_depthStencil);
 	C3D_Fini();
 
+	ptmuExit();
 	romfsExit();
 
 	return 0;
@@ -132,6 +134,9 @@ int main(int argc, char *argv[]) {
 
 void draw_controller()
 {
+	ImGuiIO &io=ImGui::GetIO();
+	ImGui::GetForegroundDrawList()->AddText(ImVec2(0,io.DisplaySize.y/2-ImGui::GetTextLineHeight()),
+	ImGui::GetColorU32(ImGuiCol_Text),error_msg.c_str());
 	//TODO：绘制控制器状态
 }
 
@@ -148,11 +153,16 @@ void draw_status_bar()
 	auto const p1 = ImVec2 (screenWidth, 0.0f);
 	auto const p2 = ImVec2 (p1.x - size.x - style.FramePadding.x, style.FramePadding.y);
 	ImGui::GetForegroundDrawList ()->AddText (p2, ImGui::GetColorU32 (ImGuiCol_Text), timeBuffer);
-	ImGui::GetForegroundDrawList()->AddText(ImVec2(0,io.DisplaySize.y/2-ImGui::GetTextLineHeight()),
-	ImGui::GetColorU32(ImGuiCol_Text),error_msg.c_str());
 
 	//TODO：绘制电池状态
 	//TODO：绘制网络状态
+	u8 isCharging=0,batteryLevel=0;
+	PTMU_GetBatteryChargeState(&isCharging);
+	PTMU_GetBatteryLevel(&batteryLevel);
+	u8 wifiLevel=osGetWifiStrength();
+	char statStr[64];
+	sprintf(statStr,"Battery: %u, Charging: %u, Wifi: %u",batteryLevel,isCharging,wifiLevel);
+	ImGui::GetForegroundDrawList()->AddText(ImVec2(0,0),ImGui::GetColorU32(ImGuiCol_Text),statStr);
 }
 
 void draw_vconv_window()

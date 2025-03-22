@@ -53,7 +53,7 @@ bool vconv_init()
         return false;
     }
     
-    error_msg="Init OK.";
+    error_msg="Init OK. Check for update: https://github.com/lxfly2000/VConV";
     return true;
 }
 

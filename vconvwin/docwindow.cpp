@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <Richedit.h>
 #include <atlstr.h>
+#include <regex>
 
 #include "docwindow.h"
 #include "common.h"
@@ -31,7 +32,6 @@ DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie,
 
 void CreateDocWindow(HWND hwnd)
 {
-	LoadLibraryA("riched20.dll");
 	HWND hDoc = CreateWindowA(RICHEDIT_CLASSA, "Document", ES_MULTILINE | ES_READONLY | WS_HSCROLL | WS_VSCROLL | WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP,
 		0, 0, CW_USEDEFAULT, 0, hwnd, (HMENU)ID_CONTROL_DOC, NULL, NULL);
 	SetFocus(hDoc);
@@ -100,4 +100,64 @@ void DocWindowA(HWND hWndParent, char * doc, int length)
 		TranslateMessage(&msg);
 		DispatchMessageA(&msg);
 	}
+}
+
+
+
+std::string to_unix_str(std::string str)
+{
+	for (size_t i = 0; i < str.size();)
+	{
+		if (str[i] == '\r')
+			str.erase(str.begin() + i);
+		else
+			i++;
+	}
+	return str;
+}
+
+void SetRichEditTextA(HWND h, LPCSTR text)
+{
+	std::string str = to_unix_str(text);
+	std::regex r("https?://[^\\n ]+");
+	std::smatch m;
+	SetWindowTextA(h, text);
+	SendMessageA(h, EM_SETEVENTMASK, NULL, ENM_LINK);
+	size_t prelen = 0;
+	CHARRANGE cr;
+	while (std::regex_search(str, m, r, std::regex_constants::match_any))
+	{
+		cr.cpMin = prelen + m.position(0);
+		cr.cpMax = prelen + m.position(0) + m.length(0);
+		SendMessageA(h, EM_EXSETSEL, NULL, (LPARAM)&cr);
+		CHARFORMATA cf;
+		cf.cbSize = sizeof(cf);
+		cf.dwMask = CFM_LINK;
+		cf.dwEffects = CFE_LINK;
+		cf.crTextColor = RGB(0, 0, 255);
+		SendMessageA(h, EM_SETCHARFORMAT, SCF_SELECTION, (WPARAM)&cf);
+		str = str.substr(m.position(0) + m.length(0));
+		prelen += m.position(0) + m.length(0);
+	}
+	cr.cpMin = cr.cpMax = 0;
+	SendMessageA(h, EM_EXSETSEL, NULL, (LPARAM)&cr);
+}
+
+INT_PTR CALLBACK OnRichEditClickMsg(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (msg == WM_NOTIFY && ((LPNMHDR)lParam)->code == EN_LINK)
+	{
+		ENLINK *el = (ENLINK*)lParam;
+		if (el->msg == WM_LBUTTONUP)
+		{
+			HWND hRE = GetDlgItem(hwnd, ((LPNMHDR)lParam)->idFrom);
+			CStringA text;
+			text.Preallocate(GetWindowTextLengthA(hRE));
+			GetWindowTextA(hRE, text.GetBuffer(), text.GetAllocLength());
+			std::string ut = to_unix_str(text.GetBuffer());
+			ut = ut.substr(el->chrg.cpMin, el->chrg.cpMax - el->chrg.cpMin);
+			return (int)ShellExecuteA(hwnd, "open", ut.c_str(), NULL, NULL, SW_NORMAL);
+		}
+	}
+	return 0;
 }

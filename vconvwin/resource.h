@@ -20,6 +20,7 @@
 #define IDS_STRING_SOCKET_INIT_ERROR    111
 #define IDS_STRING_SOCKET_CREATE_ERROR  112
 #define IDS_STRING_ALERT_DRIVER         113
+#define IDS_STRING_ABOUT                114
 #define IDR_MAINFRAME                   128
 #define IDB_BITMAP_ONLINE               129
 #define IDB_BITMAP_OFFLINE              130
@@ -45,6 +46,8 @@
 #define IDC_SPIN_PORT4                  1014
 #define IDC_CHECK_ENABLE4               1015
 #define IDC_EDIT_IPLIST                 1016
+#define IDC_RICHEDIT21                  1017
+#define IDC_RICHEDIT2_ABOUT             1017
 #define ID_32771                        32771
 #define ID_MENU_JOY                     32772
 #define ID_32773                        32773
@@ -58,7 +61,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        135
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1017
+#define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
