@@ -32,6 +32,7 @@ int socketfd;
 bool vconv_init()
 {
     read_settings();//读取设置出错不中断
+    update_sockets_config();
     // allocate buffer for SOC service
 	SOC_buffer = (u32*)memalign(SOC_ALIGN, SOC_BUFFERSIZE);
 
@@ -48,7 +49,7 @@ bool vconv_init()
 	}
     socketfd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if(socketfd==-1){
-        error_msg="socket error.";
+        error_msg="socket error: "+std::to_string(errno);
         return false;
     }
     
@@ -122,7 +123,7 @@ void printSendData(void*p,int length)
 void check_send_to(void*p,int length)
 {
     if(-1==sendto(socketfd,p,length,NULL,(sockaddr*)&addrSend,sizeof(addrSend))){
-        error_msg="sendto error.";
+        error_msg="sendto error: "+std::to_string(errno);
     }else{
         printSendData(p,length);
     }
