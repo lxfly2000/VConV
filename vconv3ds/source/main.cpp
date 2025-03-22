@@ -2,10 +2,12 @@
 #include <cstdio>
 #include <ctime>
 #include <string>
+#include <fstream>
 #include <arpa/inet.h>
 
 #include <3ds.h>
 #include <citro3d.h>
+#include <tex3ds.h>
 #include <imgui.h>
 #include <imgui_ctru.h>
 #include <imgui_citro3d.h>
@@ -13,6 +15,8 @@
 #include "utilities.h"
 #include "vconv.h"
 #include "keycodes.h"
+#include "gfx.h"
+#include "gfx_t3x.h"
 
 constexpr auto SCREEN_WIDTH = 400.0f;
 constexpr auto SCREEN_HEIGHT = 480.0f;
@@ -32,9 +36,14 @@ void *s_depthStencil = nullptr;
 bool running=true;
 bool controller_enabled=false;
 
+Tex3DS_Texture s_gfxT3x;
+C3D_Tex s_gfxTexture;
+
 void draw_controller();
 void draw_status_bar();
 void draw_vconv_window();
+void image_init();
+void image_release();
 
 int main(int argc, char *argv[]) {
 	osSetSpeedupEnable(true);
@@ -84,6 +93,7 @@ int main(int argc, char *argv[]) {
 	io.DisplayFramebufferScale = ImVec2(FB_SCALE, FB_SCALE);
 
 	vconv_init();
+	image_init();
 
 	while (running && aptMainLoop()) {
 
@@ -114,6 +124,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
+	image_release();
 	vconv_release();
 
 	imgui::citro3d::exit();
@@ -135,10 +146,12 @@ int main(int argc, char *argv[]) {
 void draw_controller()
 {
 	ImGuiIO &io=ImGui::GetIO();
-	ImGui::GetForegroundDrawList()->AddText(ImVec2(0,io.DisplaySize.y/2-ImGui::GetTextLineHeight()),
+	ImGuiStyle &style=ImGui::GetStyle();
+	ImGui::GetForegroundDrawList()->AddText(ImVec2(style.FramePadding.x,io.DisplaySize.y/2-ImGui::GetTextLineHeight()-style.FramePadding.y),
 	ImGui::GetColorU32(ImGuiCol_Text),error_msg.c_str());
 	//TODO：绘制控制器状态
 }
+
 
 void draw_status_bar()
 {
@@ -154,15 +167,54 @@ void draw_status_bar()
 	auto const p2 = ImVec2 (p1.x - size.x - style.FramePadding.x, style.FramePadding.y);
 	ImGui::GetForegroundDrawList ()->AddText (p2, ImGui::GetColorU32 (ImGuiCol_Text), timeBuffer);
 
-	//TODO：绘制电池状态
-	//TODO：绘制网络状态
 	u8 isCharging=0,batteryLevel=0;
 	PTMU_GetBatteryChargeState(&isCharging);
 	PTMU_GetBatteryLevel(&batteryLevel);
 	u8 wifiLevel=osGetWifiStrength();
-	char statStr[64];
-	sprintf(statStr,"Battery: %u, Charging: %u, Wifi: %u",batteryLevel,isCharging,wifiLevel);
-	ImGui::GetForegroundDrawList()->AddText(ImVec2(0,0),ImGui::GetColorU32(ImGuiCol_Text),statStr);
+
+	constexpr unsigned batteryLevels[] = {
+	    gfx_battery0_idx,
+	    gfx_battery0_idx,
+	    gfx_battery1_idx,
+	    gfx_battery2_idx,
+	    gfx_battery3_idx,
+	    gfx_battery4_idx,
+	};
+
+	constexpr unsigned wifiLevels[] = {
+	    gfx_wifi0_idx,
+	    gfx_wifi1_idx,
+	    gfx_wifi2_idx,
+	    gfx_wifi3_idx,
+	};
+
+	constexpr unsigned chargingStatus[]={
+		gfx_charge0_idx,
+		gfx_charge1_idx,
+	};
+
+	auto lineHeight=ImGui::GetTextLineHeight();
+	
+	auto const batteryTex = Tex3DS_GetSubTexture (s_gfxT3x, batteryLevels[batteryLevel]);
+	auto const p3=ImVec2(style.FramePadding.x,style.FramePadding.y);
+	auto const p4=ImVec2(batteryTex->width*lineHeight/batteryTex->height,lineHeight+style.FramePadding.y);
+	auto const uv3=ImVec2(batteryTex->left,batteryTex->top);
+	auto const uv4=ImVec2(batteryTex->right,batteryTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage((ImTextureID)&s_gfxTexture, p3, p4, uv3, uv4, ImGui::GetColorU32 (ImGuiCol_Text));
+
+	auto const chargingTex = Tex3DS_GetSubTexture (s_gfxT3x, chargingStatus[isCharging]);
+	auto const p5=ImVec2(p4.x+style.ItemSpacing.x,style.FramePadding.y);
+	auto const p6=ImVec2(p4.x+style.ItemSpacing.x+chargingTex->width*lineHeight/chargingTex->height,lineHeight+style.FramePadding.y);
+	auto const uv5=ImVec2(chargingTex->left,chargingTex->top);
+	auto const uv6=ImVec2(chargingTex->right,chargingTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage((ImTextureID)&s_gfxTexture, p5, p6, uv5, uv6, ImGui::GetColorU32 (ImGuiCol_Text));
+
+	auto const wifiTex = Tex3DS_GetSubTexture (s_gfxT3x, wifiLevels[wifiLevel]);
+	auto const p7=ImVec2(p6.x+style.ItemSpacing.x,style.FramePadding.y);
+	auto const p8=ImVec2(p6.x+style.ItemSpacing.x+wifiTex->width*lineHeight/wifiTex->height,lineHeight+style.FramePadding.y);
+	auto const uv7=ImVec2(wifiTex->left,wifiTex->top);
+	auto const uv8=ImVec2(wifiTex->right,wifiTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage((ImTextureID)&s_gfxTexture, p7, p8, uv7, uv8, ImGui::GetColorU32 (ImGuiCol_Text));
 }
 
 void draw_vconv_window()
@@ -241,4 +293,21 @@ void draw_vconv_window()
 		ImGui::EndTable();
 	}
 	ImGui::End();
+}
+
+void image_init()
+{
+	s_gfxT3x=Tex3DS_TextureImport(gfx_t3x,gfx_t3x_size,&s_gfxTexture,nullptr,false);
+	if(!s_gfxT3x)
+	{
+		error_msg="Cannot import texture.";
+		return;
+	}
+	C3D_TexSetFilter (&s_gfxTexture, GPU_LINEAR, GPU_LINEAR);
+}
+
+void image_release()
+{
+	Tex3DS_TextureFree(s_gfxT3x);
+	C3D_TexDelete(&s_gfxTexture);
 }
