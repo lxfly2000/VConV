@@ -45,22 +45,24 @@ SOCKET controllerSocketsSend[VCONV_MAX_CONTROLLER] = { NULL };//TODO:Ïò·¢ËÍ¶Ë·¢Ë
 
 void OnReceiveData(int n, char*buf, int length)
 {
-	if (buf[0] == 0 || buf[0] > 22)
+	if (buf[0] == 0 || buf[0] > 22 || length <= 0)
 		return;
 	else if (buf[0] <= 16)
-		states[n].Gamepad.wButtons = (buf[1] ? ((~(1 << (buf[0] - 1)))&states[n].Gamepad.wButtons) : ((1 << (buf[0] - 1)) | states[n].Gamepad.wButtons));
+		states[n].Gamepad.wButtons = (buf[1] ? ((1 << (buf[0] - 1)) | states[n].Gamepad.wButtons) : ((~(1 << (buf[0] - 1)))&states[n].Gamepad.wButtons));
 	else if (buf[0] == 17)
 		states[n].Gamepad.bLeftTrigger = buf[1];
 	else if (buf[0] == 18)
 		states[n].Gamepad.bRightTrigger = buf[1];
-	else if (buf[0] == 19)
-		states[n].Gamepad.sThumbLX = MAKEWORD(buf[1], buf[2]);
-	else if (buf[0] == 20)
-		states[n].Gamepad.sThumbLY = MAKEWORD(buf[1], buf[2]);
-	else if (buf[0] == 21)
-		states[n].Gamepad.sThumbRX = MAKEWORD(buf[1], buf[2]);
-	else if (buf[0] == 22)
-		states[n].Gamepad.sThumbRY = MAKEWORD(buf[1], buf[2]);
+	else if (length > 1) {
+		if (buf[0] == 19)
+			states[n].Gamepad.sThumbLX = MAKEWORD(buf[1], buf[2]);
+		else if (buf[0] == 20)
+			states[n].Gamepad.sThumbLY = MAKEWORD(buf[1], buf[2]);
+		else if (buf[0] == 21)
+			states[n].Gamepad.sThumbRX = MAKEWORD(buf[1], buf[2]);
+		else if (buf[0] == 22)
+			states[n].Gamepad.sThumbRY = MAKEWORD(buf[1], buf[2]);
+	}
 	vigem_target_x360_update(client, targets[n], *reinterpret_cast<XUSB_REPORT*>(&states[n].Gamepad));
 }
 

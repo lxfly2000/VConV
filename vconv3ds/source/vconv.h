@@ -19,5 +19,3 @@ void update_sockets_config();
 
 bool read_settings();
 bool save_settings();
-
-extern bool controller_enabled;

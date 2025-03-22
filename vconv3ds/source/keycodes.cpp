@@ -39,8 +39,8 @@ const KEYCODE keycodes_3ds[]={
 	{32,1,0,1,"Circle Pad Down"},
 	{33,2,-0x9C,0x9C,"X-Axis of Circle Pad"},
 	{34,2,-0x9C,0x9C,"Y-Axis of Circle Pad"},
-	{35,2,-0x9C,0x9C,"X-Axis of C-Stick (N3DS)"},
-	{36,2,-0x9C,0x9C,"Y-Axis of C-Stick (N3DS)"},
+	{35,2,-146,146,"X-Axis of C-Stick (N3DS)"},
+	{36,2,-146,146,"Y-Axis of C-Stick (N3DS)"},
 };
 
 //参考：https://docs.microsoft.com/en-us/windows/win32/api/xinput/ns-xinput-xinput_gamepad

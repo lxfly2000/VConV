@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <malloc.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,22 +16,39 @@
 
 #define SETTINGS_FILE "vconv.txt"
 
-int button_mapping_3ds_xbox[18]={0};
+#define SOC_ALIGN       0x1000
+#define SOC_BUFFERSIZE  0x100000
+
+
+int button_mapping_3ds_xbox[18]={11,12,6,5,4,3,1,2,10,9,13,14,15,16,17,18,19,20};
 std::string serverIp=SERVER_IP_DEFAULT;
 unsigned short serverPort=32000;
 std::string error_msg="";
 sockaddr_in addrSend={0};
 
+u32 *SOC_buffer = NULL;
 int socketfd;
 
 bool vconv_init()
 {
-    if(!read_settings()){
+    read_settings();//读取设置出错不中断
+    // allocate buffer for SOC service
+	SOC_buffer = (u32*)memalign(SOC_ALIGN, SOC_BUFFERSIZE);
+
+	if(SOC_buffer == NULL) {
+		error_msg="memalign: failed to allocate";
         return false;
-    }
+	}
+
+	// Now intialise soc:u service
+    Result ret;
+	if ((ret=socInit(SOC_buffer, SOC_BUFFERSIZE)) != 0) {
+    	error_msg="socInit: "+(unsigned int)ret;
+        return false;
+	}
     socketfd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
     if(socketfd==-1){
-        error_msg="socket() error.";
+        error_msg="socket error.";
         return false;
     }
     
@@ -43,7 +61,9 @@ bool vconv_release()
     if(closesocket(socketfd)){
         return false;
     }
-    return save_settings();
+    socExit();
+    save_settings();
+    return true;
 }
 
 void update_sockets_config()
@@ -81,9 +101,39 @@ bool save_settings()
     return true;
 }
 
-bool controller_enabled=false;
-circlePosition padPos={0,0};
-circlePosition csPos={0,0};
+circlePosition lastPadPos={0,0};
+circlePosition lastCsPos={0,0};
+u32 make_send_data(int keycode,int value)
+{
+    return (keycode&0xFF)|(value<<8);
+}
+
+void printSendData(void*p,int length)
+{
+    error_msg="Send: Length="+std::to_string(length)+", ["+std::to_string(((u8*)p)[0])+", ";
+    if(length==2){
+        error_msg+=std::to_string(*(u8*)(p+1));
+    }else if(length==3){
+        error_msg+=std::to_string(*(short*)(p+1));
+    }
+    error_msg+="]";
+}
+
+void check_send_to(void*p,int length)
+{
+    if(-1==sendto(socketfd,p,length,NULL,(sockaddr*)&addrSend,sizeof(addrSend))){
+        error_msg="sendto error.";
+    }else{
+        printSendData(p,length);
+    }
+}
+
+s16 axis_min_max(s16 min_value,s16 value,s16 max_value)
+{
+    if(value<min_value)value=min_value;
+    else if(value>max_value)value=max_value;
+    return value;
+}
 
 void vconv_send()
 {
@@ -92,28 +142,106 @@ void vconv_send()
     auto keysheld=keysHeld();
     circlePosition padPos={0,0};
     circlePosition csPos={0,0};
+    hidCircleRead(&padPos);
+    hidCstickRead(&csPos);
+    padPos.dx=axis_min_max(keycodes_3ds[33].value_range_start,padPos.dx,keycodes_3ds[33].value_range_end);
+    padPos.dy=axis_min_max(keycodes_3ds[34].value_range_start,padPos.dy,keycodes_3ds[34].value_range_end);
+    csPos.dx=axis_min_max(keycodes_3ds[35].value_range_start,csPos.dx,keycodes_3ds[35].value_range_end);
+    csPos.dy=axis_min_max(keycodes_3ds[36].value_range_start,csPos.dy,keycodes_3ds[36].value_range_end);
+    if(!PAD_X_TRIGGERED(keysheld)){
+        padPos.dx=0;
+    }
+    if(!PAD_Y_TRIGGERED(keysheld)){
+        padPos.dy=0;
+    }
+    if(!CSTICK_X_TRIGGERED(keysheld)){
+        csPos.dx=0;
+    }
+    if(!CSTICK_Y_TRIGGERED(keysheld)){
+        csPos.dy=0;
+    }
     for(int i=0;i<32;i++){
         if((1<<i)&keysdown&USED_BUTTON_BITS){
             int keycode3DS=i+1;
-            int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[i+1]]];
+            int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[keycode3DS]]];
             int value3DS=1;
-            int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)/
-                (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)*
-                (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)+
+            int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)*
+                (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)/
+                (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)+
                 keycodes_xbox[keycodeXbox].value_range_start;
-            unsigned char senddata[4]={keycodeXbox,0};
-            memcpy(senddata+1,&valueXbox,keycodes_xbox[keycodeXbox].value_length);
+            if(keycodeXbox!=0){
+                auto sendData=make_send_data(keycodeXbox,valueXbox);
+                check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+            }
         }
         if((1<<i)&keysup&USED_BUTTON_BITS){
             int keycode3DS=i+1;
-            int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[i+1]]];
+            int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[keycode3DS]]];
             int value3DS=0;
-            int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)/
-                (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)*
-                (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)+
+            int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)*
+                (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)/
+                (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)+
                 keycodes_xbox[keycodeXbox].value_range_start;
-            unsigned char senddata[4]={keycodeXbox,0};
-            memcpy(senddata+1,&valueXbox,keycodes_xbox[keycodeXbox].value_length);
+            if(keycodeXbox!=0){
+                auto sendData=make_send_data(keycodeXbox,valueXbox);
+                check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+            }
+        }
+    }
+    if(padPos.dx!=lastPadPos.dx){
+        lastPadPos.dx=padPos.dx;
+        int keycode3DS=33;
+        int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[keycode3DS]]];
+        int value3DS=padPos.dx;
+        int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)*
+            (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)/
+            (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)+
+            keycodes_xbox[keycodeXbox].value_range_start;
+        if(keycodeXbox!=0){
+            auto sendData=make_send_data(keycodeXbox,valueXbox);
+            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+        }
+    }
+    if(padPos.dy!=lastPadPos.dy){
+        lastPadPos.dy=padPos.dy;
+        int keycode3DS=34;
+        int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[keycode3DS]]];
+        int value3DS=padPos.dy;
+        int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)*
+            (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)/
+            (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)+
+            keycodes_xbox[keycodeXbox].value_range_start;
+        if(keycodeXbox!=0){
+            auto sendData=make_send_data(keycodeXbox,valueXbox);
+            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+        }
+    }
+    if(csPos.dx!=lastCsPos.dx){
+        lastCsPos.dx=csPos.dx;
+        int keycode3DS=35;
+        int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[keycode3DS]]];
+        int value3DS=csPos.dx;
+        int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)*
+            (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)/
+            (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)+
+            keycodes_xbox[keycodeXbox].value_range_start;
+        if(keycodeXbox!=0){
+            auto sendData=make_send_data(keycodeXbox,valueXbox);
+            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+        }
+    }
+    if(csPos.dy!=lastCsPos.dy){
+        lastCsPos.dy=csPos.dy;
+        int keycode3DS=36;
+        int keycodeXbox=index_used_keycodes_xbox[button_mapping_3ds_xbox[keycodes_3ds_to_index_used[keycode3DS]]];
+        int value3DS=csPos.dy;
+        int valueXbox=(value3DS-keycodes_3ds[keycode3DS].value_range_start)*
+            (keycodes_xbox[keycodeXbox].value_range_end-keycodes_xbox[keycodeXbox].value_range_start)/
+            (keycodes_3ds[keycode3DS].value_range_end-keycodes_3ds[keycode3DS].value_range_start)+
+            keycodes_xbox[keycodeXbox].value_range_start;
+        if(keycodeXbox!=0){
+            auto sendData=make_send_data(keycodeXbox,valueXbox);
+            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
         }
     }
 }

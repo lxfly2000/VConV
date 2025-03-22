@@ -30,6 +30,7 @@ C3D_RenderTarget *s_bottom = nullptr;
 void *s_depthStencil = nullptr;
 
 bool running=true;
+bool controller_enabled=false;
 
 void draw_controller();
 void draw_status_bar();
@@ -107,7 +108,9 @@ int main(int argc, char *argv[]) {
 
 		C3D_FrameEnd(0);
 
-		vconv_send();
+		if(controller_enabled){
+			vconv_send();
+		}
 	}
 	
 	vconv_release();
@@ -164,13 +167,12 @@ void draw_vconv_window()
 		ImGuiIO&io=ImGui::GetIO();
 		if(controller_enabled){
 			io.ConfigFlags|=ImGuiConfigFlags_NoKeyboard;
-			update_sockets_config();
 		}else{
 			io.ConfigFlags=(~ImGuiConfigFlags_NoKeyboard)&io.ConfigFlags;
 		}
 	}
 	ImGui::SameLine(260-style.WindowPadding.x-style.ScrollbarSize);
-	if(ImGui::Button("Exit",ImVec2(60,0))){//必须有通过界面上退出的按钮，因为按钮在程序工作时全被占用了
+	if(ImGui::Button("Exit",ImVec2(60,0))){//必须有通过界面上退出的按钮，因为控制器按钮在程序工作时全被占用了
 		running=false;
 	}
 	ImGui::Text("IP");
@@ -181,6 +183,7 @@ void draw_vconv_window()
 			auto ip=inet_addr(newIp.c_str());
 			if(ip!=INADDR_ANY&&ip!=INADDR_NONE){
 				serverIp=newIp;
+				update_sockets_config();
 			}
 		}
 	}
@@ -191,7 +194,7 @@ void draw_vconv_window()
 		std::string sPort=std::to_string(serverPort);
 		if(get_text_input(sPort,sPort)){
 			serverPort=atoi(sPort.c_str());
-			//TODO:更新设置
+			update_sockets_config();
 		}
 	}
 
