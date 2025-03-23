@@ -19,5 +19,8 @@ Virtual Controller for VConV
 ## 模拟器运行方法
 在VSCode中打开后按下Ctrl+Shift+P，选择“Task: Run Task”，“run debug”或“run release”
 
+## CIA构建方法
+1. TODO
+
 ## 参考
 * [ftpd](https://github.com/mtheall/ftpd)

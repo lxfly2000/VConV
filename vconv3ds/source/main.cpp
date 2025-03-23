@@ -15,6 +15,7 @@
 #include "utilities.h"
 #include "vconv.h"
 #include "keycodes.h"
+#include "audio.h"
 #include "gfx.h"
 #include "gfx_t3x.h"
 
@@ -33,7 +34,6 @@ C3D_RenderTarget *s_right = nullptr;
 C3D_RenderTarget *s_bottom = nullptr;
 void *s_depthStencil = nullptr;
 
-bool running=true;
 bool controller_enabled=false;
 
 Tex3DS_Texture s_gfxT3x;
@@ -92,7 +92,12 @@ int main(int argc, char *argv[]) {
 	io.DisplaySize = ImVec2(SCREEN_WIDTH, SCREEN_HEIGHT);
 	io.DisplayFramebufferScale = ImVec2(FB_SCALE, FB_SCALE);
 
-	vconv_init();
+	audio_init();
+	if(vconv_init()){
+		audio_play(AUDIO_ID_SUCCESS);
+	}else{
+		audio_play(AUDIO_ID_ERROR);
+	}
 	image_init();
 
 	while (running && aptMainLoop()) {
@@ -120,10 +125,13 @@ int main(int argc, char *argv[]) {
 		C3D_FrameEnd(0);
 
 		if(controller_enabled){
-			vconv_send();
+			if(!vconv_send()){
+				audio_play(AUDIO_ID_ERROR);
+			}
 		}
 	}
 	
+	audio_release();
 	image_release();
 	vconv_release();
 
@@ -232,6 +240,7 @@ void draw_vconv_window()
 		}else{
 			io.ConfigFlags=(~ImGuiConfigFlags_NoKeyboard)&io.ConfigFlags;
 		}
+		audio_play(controller_enabled?1:0);
 	}
 	ImGui::SameLine(260-style.WindowPadding.x-style.ScrollbarSize);
 	if(ImGui::Button("Exit",ImVec2(60,0))){//必须有通过界面上退出的按钮，因为控制器按钮在程序工作时全被占用了

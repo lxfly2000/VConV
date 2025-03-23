@@ -12,7 +12,8 @@
                 "${workspaceFolder}\\external\\imgui\\**",
                 "${workspaceFolder}\\external\\imgui_citro3d\\**",
                 "D:\\devkitPro\\libctru\\include\\**",
-                "D:\\devkitPro\\devkitARM\\arm-none-eabi\\include\\**"
+                "D:\\devkitPro\\devkitARM\\arm-none-eabi\\include\\**",
+                "D:\\devkitPro\\portlibs\\3ds\\include\\**"
             ],
             "defines": [
                 "_DEBUG",
@@ -29,7 +30,8 @@
                     "${workspaceFolder}\\external\\imgui\\**",
                     "${workspaceFolder}\\external\\imgui_citro3d\\**",
                     "D:\\devkitPro\\libctru\\include\\**",
-                    "D:\\devkitPro\\devkitARM\\arm-none-eabi\\include\\**"
+                    "D:\\devkitPro\\devkitARM\\arm-none-eabi\\include\\**",
+                    "D:\\devkitPro\\portlibs\\3ds\\include\\**"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""

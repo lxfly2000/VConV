@@ -9,11 +9,12 @@ extern int button_mapping_3ds_xbox[18];
 extern std::string serverIp;
 extern unsigned short serverPort;
 extern std::string error_msg;
+extern bool running;
 
 bool vconv_init();
 bool vconv_release();
 
-void vconv_send();
+bool vconv_send();
 
 void update_sockets_config();
 

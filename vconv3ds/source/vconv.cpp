@@ -20,6 +20,7 @@
 #define SOC_BUFFERSIZE  0x100000
 
 
+bool running=true;
 int button_mapping_3ds_xbox[18]={11,12,6,5,4,3,1,2,10,9,13,14,15,16,17,18,19,20};
 std::string serverIp=SERVER_IP_DEFAULT;
 unsigned short serverPort=32000;
@@ -120,12 +121,15 @@ void printSendData(void*p,int length)
     error_msg+="]";
 }
 
-void check_send_to(void*p,int length)
+#define check_send_to(p,l) if(!check_send_to_rt(p,l))return false
+bool check_send_to_rt(void*p,int length)
 {
     if(-1==sendto(socketfd,p,length,NULL,(sockaddr*)&addrSend,sizeof(addrSend))){
         error_msg="sendto error: "+std::to_string(errno);
+        return false;
     }else{
         printSendData(p,length);
+        return true;
     }
 }
 
@@ -136,7 +140,7 @@ s16 axis_min_max(s16 min_value,s16 value,s16 max_value)
     return value;
 }
 
-void vconv_send()
+bool vconv_send()
 {
     auto keysdown=keysDown();
     auto keysup=keysUp();
@@ -245,4 +249,5 @@ void vconv_send()
             check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
         }
     }
+    return true;
 }
