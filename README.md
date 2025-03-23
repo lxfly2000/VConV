@@ -1,12 +1,10 @@
 # VConV
-Virtual Controller for VConV.
+这个程序可以让你在Windows上用3DS来模拟Xbox手柄的操作。
 
-This app can make use of 3DS to simulate Xbox controller on Windows.
+## 使用方法
+* Windows: [下载](https://github.com/lxfly2000/VConV/releases)并运行`vconvwin(64).exe`，配置虚拟手柄的监听端口后点击“Enable/Disable”.
+* 3DS: [下载](https://github.com/lxfly2000/VConV/releases)`vconv3ds.3dsx`然后在Homebrew菜单上运行，配置要连接主机上的IP地址和端口，点击“Enable”.
 
-## Usage
-* On Windows: [Download](https://github.com/lxfly2000/VConV/releases) and run `vconvwin(64).exe`, configure listening port of virtual controllers, click “Enable/Disable”.
-* On 3DS: [Download](https://github.com/lxfly2000/VConV/releases) and run `vconv3ds.3dsx` from Homebrew menu, configure IP:Port of host on which you run exe, click “Enable”.
-
-## Screenshot
+## 软件截图
 ![Preview](preview.png)
 

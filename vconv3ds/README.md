@@ -20,7 +20,7 @@ Virtual Controller for VConV
 在VSCode中打开后按下Ctrl+Shift+P，选择“Task: Run Task”，“run debug”或“run release”
 
 ## CIA构建方法
-1. TODO
+请参考[buildcia](buildcia)文件夹。
 
 ## 参考
 * [ftpd](https://github.com/mtheall/ftpd)
