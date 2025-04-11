@@ -2,11 +2,11 @@
 
 #include <3ds.h>
 
-bool get_text_input(std::string initial,std::string&out)
+bool get_text_input(std::string initial,std::string&out,int kbdType,int lengthLimit)
 {
 	SwkbdState kbd;
 
-	swkbdInit (&kbd, SWKBD_TYPE_NORMAL, 2, -1);
+	swkbdInit (&kbd, (SwkbdType)kbdType, 2, lengthLimit);
 	swkbdSetButton (&kbd, SWKBD_BUTTON_LEFT, "Cancel", false);
 	swkbdSetButton (&kbd, SWKBD_BUTTON_RIGHT, "OK", true);
 	swkbdSetInitialText (&kbd,initial.c_str());
