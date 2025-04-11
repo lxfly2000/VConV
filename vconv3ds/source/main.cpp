@@ -44,12 +44,12 @@ void draw_status_bar();
 void draw_vconv_window();
 void image_init();
 void image_release();
+bool enable_backlights(bool);
 
 int main(int argc, char *argv[]) {
 	osSetSpeedupEnable(true);
 	romfsInit();
 	ptmuInit();
-	gspLcdInit();
 	gfxInitDefault();
 
 #ifndef NDEBUG
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 			auto const kDown=hidKeysDown();
 			if(kDown&KEY_TOUCH){
 				screen_light=true;
-				if(0==GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH)){
+				if(enable_backlights(screen_light)){
 					audio_play(AUDIO_ID_SUCCESS);
 				}else{
 					audio_play(AUDIO_ID_ERROR);
@@ -155,10 +155,9 @@ int main(int argc, char *argv[]) {
 	vramFree(s_depthStencil);
 	C3D_Fini();
 
-	GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+	enable_backlights(true);
 
 	gfxExit();
-	gspLcdExit();
 	ptmuExit();
 	romfsExit();
 
@@ -256,16 +255,13 @@ void draw_vconv_window()
 		}
 		audio_play(controller_enabled?AUDIO_ID_SUCCESS:AUDIO_ID_ERROR);
 	}
-	ImGui::SetItemTooltip("UI input other than touch screen\nwill be disabled.");
+	ImGui::SetItemTooltip("UI input will be disabled.");
 	ImGui::SameLine();
 	if(ImGui::Button("Turn off backlights")){
 		//不要用PowerOn/OffAllBacklights，疑似有Bug
 		screen_light=false;
-		if(0==GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH)){
-			audio_play(AUDIO_ID_SUCCESS);
-		}else{
-			audio_play(AUDIO_ID_ERROR);
-		}
+		enable_backlights(screen_light);
+		audio_play(AUDIO_ID_ERROR);
 	}
 	ImGui::SetItemTooltip("Touch screen to turn on backlights.");
 	ImGui::SameLine(260-style.WindowPadding.x-style.ScrollbarSize);
@@ -345,4 +341,17 @@ void image_release()
 {
 	Tex3DS_TextureFree(s_gfxT3x);
 	C3D_TexDelete(&s_gfxTexture);
+}
+
+bool enable_backlights(bool b)
+{
+	gspLcdInit();
+	Result r=0;
+	if(b){
+		r=GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+	}else{
+		r=GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH);
+	}
+	gspLcdExit();
+	return r==0;
 }
