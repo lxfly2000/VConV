@@ -10,6 +10,7 @@ extern std::string serverIp;
 extern unsigned short serverPort;
 extern std::string error_msg;
 extern bool running;
+extern bool screen_light;
 
 bool vconv_init();
 bool vconv_release();

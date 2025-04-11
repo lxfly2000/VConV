@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 	osSetSpeedupEnable(true);
 	romfsInit();
 	ptmuInit();
-
+	gspLcdInit();
 	gfxInitDefault();
 
 #ifndef NDEBUG
@@ -103,30 +103,40 @@ int main(int argc, char *argv[]) {
 	while (running && aptMainLoop()) {
 
 		hidScanInput ();
-		if(!controller_enabled){
+		if(controller_enabled){
+			if(!vconv_send()){
+				audio_play(AUDIO_ID_ERROR);
+			}
+		}else{
 			auto const kDown = hidKeysDown ();
 			if (kDown & KEY_START)
 				break;
 		}
 
-		imgui::ctru::newFrame();
-		ImGui::NewFrame();
+		if(screen_light){
+			imgui::ctru::newFrame();
+			ImGui::NewFrame();
 
-		draw_controller();
-		draw_status_bar();
-		draw_vconv_window();
+			draw_controller();
+			draw_status_bar();
+			draw_vconv_window();
 
-		ImGui::Render();
+			ImGui::Render();
 
-		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+			C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
-		imgui::citro3d::render(s_left,s_right, s_bottom);
+			imgui::citro3d::render(s_left,s_right, s_bottom);
 
-		C3D_FrameEnd(0);
-
-		if(controller_enabled){
-			if(!vconv_send()){
-				audio_play(AUDIO_ID_ERROR);
+			C3D_FrameEnd(0);
+		}else{
+			auto const kDown=hidKeysDown();
+			if(kDown&KEY_TOUCH){
+				screen_light=true;
+				if(0==GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH)){
+					audio_play(AUDIO_ID_SUCCESS);
+				}else{
+					audio_play(AUDIO_ID_ERROR);
+				}
 			}
 		}
 	}
@@ -145,6 +155,10 @@ int main(int argc, char *argv[]) {
 	vramFree(s_depthStencil);
 	C3D_Fini();
 
+	GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+
+	gfxExit();
+	gspLcdExit();
 	ptmuExit();
 	romfsExit();
 
@@ -240,8 +254,20 @@ void draw_vconv_window()
 		}else{
 			io.ConfigFlags=(~ImGuiConfigFlags_NoKeyboard)&io.ConfigFlags;
 		}
-		audio_play(controller_enabled?1:0);
+		audio_play(controller_enabled?AUDIO_ID_SUCCESS:AUDIO_ID_ERROR);
 	}
+	ImGui::SetItemTooltip("UI input other than touch screen\nwill be disabled.");
+	ImGui::SameLine();
+	if(ImGui::Button("Turn off backlights")){
+		//不要用PowerOn/OffAllBacklights，疑似有Bug
+		screen_light=false;
+		if(0==GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH)){
+			audio_play(AUDIO_ID_SUCCESS);
+		}else{
+			audio_play(AUDIO_ID_ERROR);
+		}
+	}
+	ImGui::SetItemTooltip("Touch screen to turn on backlights.");
 	ImGui::SameLine(260-style.WindowPadding.x-style.ScrollbarSize);
 	if(ImGui::Button("Exit",ImVec2(60,0))){//必须有通过界面上退出的按钮，因为控制器按钮在程序工作时全被占用了
 		running=false;
@@ -250,7 +276,7 @@ void draw_vconv_window()
 	ImGui::SameLine();
 	if(ImGui::Button(serverIp.c_str(),ImVec2(150,0))){
 		std::string newIp;
-		if(get_text_input(serverIp,newIp)){
+		if(get_text_input(serverIp,newIp,1,39)){
 			auto ip=inet_addr(newIp.c_str());
 			if(ip!=INADDR_ANY&&ip!=INADDR_NONE){
 				serverIp=newIp;
@@ -263,7 +289,7 @@ void draw_vconv_window()
 	ImGui::SameLine();
 	if(ImGui::Button(std::to_string(serverPort).c_str(),ImVec2(80,0))){
 		std::string sPort=std::to_string(serverPort);
-		if(get_text_input(sPort,sPort)){
+		if(get_text_input(sPort,sPort,2,5)){
 			serverPort=atoi(sPort.c_str());
 			update_sockets_config();
 		}
