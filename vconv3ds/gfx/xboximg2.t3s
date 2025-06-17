@@ -1,0 +1,13 @@
+-f rgba -z auto --atlas
+up.png
+down.png
+left.png
+right.png
+lb.png
+rb.png
+uppress.png
+downpress.png
+leftpress.png
+rightpress.png
+lbpress.png
+rbpress.png

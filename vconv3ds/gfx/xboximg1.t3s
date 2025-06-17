@@ -1,0 +1,23 @@
+-f rgba -z auto --atlas
+a.png
+b.png
+x.png
+y.png
+st.png
+bk.png
+ls.png
+rs.png
+lsrange.png
+rsrange.png
+lt.png
+rt.png
+apress.png
+bpress.png
+xpress.png
+ypress.png
+stpress.png
+bkpress.png
+lspress.png
+rspress.png
+ltpress.png
+rtpress.png

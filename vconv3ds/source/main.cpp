@@ -18,6 +18,10 @@
 #include "audio.h"
 #include "gfx.h"
 #include "gfx_t3x.h"
+#include "xboximg1.h"
+#include "xboximg1_t3x.h"
+#include "xboximg2.h"
+#include "xboximg2_t3x.h"
 
 constexpr auto SCREEN_WIDTH = 400.0f;
 constexpr auto SCREEN_HEIGHT = 480.0f;
@@ -36,8 +40,8 @@ void *s_depthStencil = nullptr;
 
 bool controller_enabled=false;
 
-Tex3DS_Texture s_gfxT3x;
-C3D_Tex s_gfxTexture;
+Tex3DS_Texture s_gfxT3x,s_xboximgT3x1,s_xboximgT3x2;
+C3D_Tex s_gfxTexture,s_xboximgTexture1,s_xboximgTexture2;
 
 void draw_controller();
 void draw_status_bar();
@@ -170,7 +174,195 @@ void draw_controller()
 	ImGuiStyle &style=ImGui::GetStyle();
 	ImGui::GetForegroundDrawList()->AddText(ImVec2(style.FramePadding.x,io.DisplaySize.y/2-ImGui::GetTextLineHeight()-style.FramePadding.y),
 	ImGui::GetColorU32(ImGuiCol_Text),error_msg.c_str());
-	//TODO：绘制控制器状态
+	//绘制控制器状态
+
+	//方向键和ABXY键的偏移方向（从上方开始顺时针）
+	constexpr int direction_x[4] = {0, 1, 0, -1};
+	constexpr int direction_y[4] = {-1, 0, 1, 0};
+
+	//定义按键绘制位置
+	constexpr auto dpad_pos=ImVec2(120,180);
+	constexpr auto left_stick_pos=ImVec2(60,110);
+	constexpr auto right_stick_pos=ImVec2(280,180);
+	constexpr auto abxy_pos=ImVec2(340,110);
+	constexpr auto start_pos=ImVec2(230,110);
+	constexpr auto back_pos=ImVec2(170,110);
+	constexpr auto left_shoulder_bottomleft_pos=ImVec2(30,60);
+	constexpr auto left_trigger_bottomleft_pos=ImVec2(30,40);
+	constexpr auto right_shoulder_bottomright_pos=ImVec2(370,60);
+	constexpr auto right_trigger_bottomright_pos=ImVec2(370,40);
+
+	//绘制方向键
+	constexpr unsigned dpad_images[] = {
+		xboximg2_up_idx,
+		xboximg2_right_idx,
+		xboximg2_down_idx,
+		xboximg2_left_idx,
+	};
+
+	constexpr unsigned dpad_pressed_images[] = {
+		xboximg2_uppress_idx,
+		xboximg2_rightpress_idx,
+		xboximg2_downpress_idx,
+		xboximg2_leftpress_idx,
+	};
+
+	constexpr short dpad_keycodes[] = {1,4,2,3};
+
+	for(int i=0;i<4;i++){
+		auto const tex = Tex3DS_GetSubTexture(s_xboximgT3x2, xbox_controller_key_status[dpad_keycodes[i]] ? dpad_pressed_images[i] : dpad_images[i]);
+		auto const posTopLeft = ImVec2(dpad_pos.x + (direction_x[i]-0.5f) * tex->width, dpad_pos.y + (direction_y[i]-0.5f) * tex->height);
+		auto const posBottomRight = ImVec2(dpad_pos.x + (direction_x[i]+0.5f) * tex->width, dpad_pos.y + (direction_y[i]+0.5f) * tex->height);
+		auto const uvTopLeft = ImVec2(tex->left, tex->top);
+		auto const uvBottomRight = ImVec2(tex->right, tex->bottom);
+		ImGui::GetForegroundDrawList()->AddImage((ImTextureID)&s_xboximgTexture2, posTopLeft, posBottomRight, uvTopLeft, uvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	}
+
+	//绘制ABXY键
+	constexpr unsigned abxy_images[] = {
+		xboximg1_y_idx,
+		xboximg1_b_idx,
+		xboximg1_a_idx,
+		xboximg1_x_idx,
+	};
+
+	constexpr unsigned abxy_pressed_images[] = {
+		xboximg1_ypress_idx,
+		xboximg1_bpress_idx,
+		xboximg1_apress_idx,
+		xboximg1_xpress_idx,
+	};
+
+	constexpr short abxy_keycodes[] = {16, 14, 13, 15};
+
+	for(int i=0;i<4;i++){
+		auto const tex = Tex3DS_GetSubTexture(s_xboximgT3x1, xbox_controller_key_status[abxy_keycodes[i]] ? abxy_pressed_images[i] : abxy_images[i]);
+		auto const posTopLeft = ImVec2(abxy_pos.x + (direction_x[i]-0.5f) * tex->width, abxy_pos.y + (direction_y[i]-0.5f) * tex->height);
+		auto const posBottomRight = ImVec2(abxy_pos.x + (direction_x[i]+0.5f) * tex->width, abxy_pos.y + (direction_y[i]+0.5f) * tex->height);
+		auto const uvTopLeft = ImVec2(tex->left, tex->top);
+		auto const uvBottomRight = ImVec2(tex->right, tex->bottom);
+		ImGui::GetForegroundDrawList()->AddImage((ImTextureID)&s_xboximgTexture1, posTopLeft, posBottomRight, uvTopLeft, uvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	}
+
+	//绘制开始、返回键
+	auto const startTex = Tex3DS_GetSubTexture(s_xboximgT3x1, xbox_controller_key_status[5] ? xboximg1_stpress_idx : xboximg1_st_idx);
+	auto const startPosTopLeft = ImVec2(start_pos.x - startTex->width / 2, start_pos.y - startTex->height / 2);
+	auto const startPosBottomRight = ImVec2(start_pos.x + startTex->width / 2, start_pos.y + startTex->height / 2);
+	auto const startUvTopLeft = ImVec2(startTex->left, startTex->top);
+	auto const startUvBottomRight = ImVec2(startTex->right, startTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, startPosTopLeft, startPosBottomRight,
+		startUvTopLeft, startUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	auto const backTex = Tex3DS_GetSubTexture(s_xboximgT3x1, xbox_controller_key_status[6] ? xboximg1_bkpress_idx : xboximg1_bk_idx);
+	auto const backPosTopLeft = ImVec2(back_pos.x - backTex->width / 2, back_pos.y - backTex->height / 2);
+	auto const backPosBottomRight = ImVec2(back_pos.x + backTex->width / 2, back_pos.y + backTex->height / 2);
+	auto const backUvTopLeft = ImVec2(backTex->left, backTex->top);
+	auto const backUvBottomRight = ImVec2(backTex->right, backTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, backPosTopLeft, backPosBottomRight,
+		backUvTopLeft, backUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	//绘制左肩键
+	auto const leftShoulderTex = Tex3DS_GetSubTexture(s_xboximgT3x2, xbox_controller_key_status[9] ? xboximg2_lbpress_idx : xboximg2_lb_idx);
+	auto const leftShoulderPosTopLeft = ImVec2(left_shoulder_bottomleft_pos.x, left_shoulder_bottomleft_pos.y - leftShoulderTex->height);
+	auto const leftShoulderPosBottomRight = ImVec2(left_shoulder_bottomleft_pos.x + leftShoulderTex->width, left_shoulder_bottomleft_pos.y);
+	auto const leftShoulderUvTopLeft = ImVec2(leftShoulderTex->left, leftShoulderTex->top);
+	auto const leftShoulderUvBottomRight = ImVec2(leftShoulderTex->right, leftShoulderTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture2, leftShoulderPosTopLeft, leftShoulderPosBottomRight,
+		leftShoulderUvTopLeft, leftShoulderUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	//绘制右肩键
+	auto const rightShoulderTex = Tex3DS_GetSubTexture(s_xboximgT3x2, xbox_controller_key_status[10] ? xboximg2_rbpress_idx : xboximg2_rb_idx);
+	auto const rightShoulderPosTopLeft = ImVec2(right_shoulder_bottomright_pos.x - rightShoulderTex->width, right_shoulder_bottomright_pos.y - rightShoulderTex->height);
+	auto const rightShoulderPosBottomRight = right_shoulder_bottomright_pos;
+	auto const rightShoulderUvTopLeft = ImVec2(rightShoulderTex->left, rightShoulderTex->top);
+	auto const rightShoulderUvBottomRight = ImVec2(rightShoulderTex->right, rightShoulderTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture2, rightShoulderPosTopLeft, rightShoulderPosBottomRight,
+		rightShoulderUvTopLeft, rightShoulderUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	//绘制左扳机
+	auto const leftTriggerTexRelease = Tex3DS_GetSubTexture(s_xboximgT3x1, xboximg1_lt_idx);
+	auto const leftTriggerPosReleaseTopLeft = ImVec2(left_trigger_bottomleft_pos.x, left_trigger_bottomleft_pos.y - leftTriggerTexRelease->height);
+	auto const leftTriggerPosReleaseBottomRight = ImVec2(left_trigger_bottomleft_pos.x + leftTriggerTexRelease->width, left_trigger_bottomleft_pos.y);
+	auto const leftTriggerUvReleaseTopLeft = ImVec2(leftTriggerTexRelease->left, leftTriggerTexRelease->top);
+	auto const leftTriggerUvReleaseBottomRight = ImVec2(leftTriggerTexRelease->right, leftTriggerTexRelease->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, leftTriggerPosReleaseTopLeft, leftTriggerPosReleaseBottomRight,
+		leftTriggerUvReleaseTopLeft, leftTriggerUvReleaseBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	auto const leftTriggerTexPress = Tex3DS_GetSubTexture(s_xboximgT3x1, xboximg1_ltpress_idx);
+	auto const leftTriggerPosPressTopLeft = ImVec2(left_trigger_bottomleft_pos.x, left_trigger_bottomleft_pos.y - leftTriggerTexPress->height);
+	auto const leftTriggerPosPressBottomRight = ImVec2(left_trigger_bottomleft_pos.x + leftTriggerTexPress->width, left_trigger_bottomleft_pos.y - leftTriggerTexPress->height + leftTriggerTexPress->height*xbox_controller_key_status[17]/255.0f);
+	auto const leftTriggerUvPressTopLeft = ImVec2(leftTriggerTexPress->left, leftTriggerTexPress->top);
+	auto const leftTriggerUvPressBottomRight = ImVec2(leftTriggerTexPress->right, leftTriggerTexPress->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, leftTriggerPosPressTopLeft, leftTriggerPosPressBottomRight,
+		leftTriggerUvPressTopLeft, leftTriggerUvPressBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+
+	//绘制右扳机
+	auto const rightTriggerTexRelease = Tex3DS_GetSubTexture(s_xboximgT3x1, xboximg1_rt_idx);
+	auto const rightTriggerPosReleaseTopLeft = ImVec2(right_trigger_bottomright_pos.x - rightTriggerTexRelease->width, right_trigger_bottomright_pos.y - rightTriggerTexRelease->height);
+	auto const rightTriggerPosReleaseBottomRight = right_trigger_bottomright_pos;
+	auto const rightTriggerUvReleaseTopLeft = ImVec2(rightTriggerTexRelease->left, rightTriggerTexRelease->top);
+	auto const rightTriggerUvReleaseBottomRight = ImVec2(rightTriggerTexRelease->right, rightTriggerTexRelease->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, rightTriggerPosReleaseTopLeft, rightTriggerPosReleaseBottomRight,
+		rightTriggerUvReleaseTopLeft, rightTriggerUvReleaseBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	auto const rightTriggerTexPress = Tex3DS_GetSubTexture(s_xboximgT3x1, xboximg1_rtpress_idx);
+	auto const rightTriggerPosPressTopLeft = ImVec2(right_trigger_bottomright_pos.x - rightTriggerTexPress->width, right_trigger_bottomright_pos.y - rightTriggerTexPress->height);
+	auto const rightTriggerPosPressBottomRight = ImVec2(right_trigger_bottomright_pos.x, right_trigger_bottomright_pos.y - rightTriggerTexPress->height + rightTriggerTexPress->height*xbox_controller_key_status[18]/255.0f);
+	auto const rightTriggerUvPressTopLeft = ImVec2(rightTriggerTexPress->left, rightTriggerTexPress->top);
+	auto const rightTriggerUvPressBottomRight = ImVec2(rightTriggerTexPress->right, rightTriggerTexPress->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, rightTriggerPosPressTopLeft, rightTriggerPosPressBottomRight,
+		rightTriggerUvPressTopLeft, rightTriggerUvPressBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	//绘制左摇杆
+	auto const leftStickRangeTex = Tex3DS_GetSubTexture(s_xboximgT3x1, xboximg1_lsrange_idx);
+	auto const leftStickRangePosTopLeft = ImVec2(left_stick_pos.x - leftStickRangeTex->width / 2, left_stick_pos.y - leftStickRangeTex->height / 2);
+	auto const leftStickRangePosBottomRight = ImVec2(left_stick_pos.x + leftStickRangeTex->width / 2, left_stick_pos.y + leftStickRangeTex->height / 2);
+	auto const leftStickRangeUvTopLeft = ImVec2(leftStickRangeTex->left, leftStickRangeTex->top);
+	auto const leftStickRangeUvBottomRight = ImVec2(leftStickRangeTex->right, leftStickRangeTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, leftStickRangePosTopLeft, leftStickRangePosBottomRight,
+		leftStickRangeUvTopLeft, leftStickRangeUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	auto const leftStickCenterPos = ImVec2(left_stick_pos.x + leftStickRangeTex->width / 2.0f * xbox_controller_key_status[19] / 32768.0f,
+		left_stick_pos.y - leftStickRangeTex->height / 2.0f * xbox_controller_key_status[20] / 32768.0f);
+	auto const leftStickTex = Tex3DS_GetSubTexture(s_xboximgT3x1, xbox_controller_key_status[7] ? xboximg1_lspress_idx : xboximg1_ls_idx);
+	auto const leftStickPosTopLeft = ImVec2(leftStickCenterPos.x - leftStickTex->width / 2, leftStickCenterPos.y - leftStickTex->height / 2);
+	auto const leftStickPosBottomRight = ImVec2(leftStickCenterPos.x + leftStickTex->width / 2, leftStickCenterPos.y + leftStickTex->height / 2);
+	auto const leftStickUvTopLeft = ImVec2(leftStickTex->left, leftStickTex->top);
+	auto const leftStickUvBottomRight = ImVec2(leftStickTex->right, leftStickTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, leftStickPosTopLeft, leftStickPosBottomRight,
+		leftStickUvTopLeft, leftStickUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	//绘制右摇杆
+	auto const rightStickRangeTex = Tex3DS_GetSubTexture(s_xboximgT3x1, xboximg1_rsrange_idx);
+	auto const rightStickRangePosTopLeft = ImVec2(right_stick_pos.x - rightStickRangeTex->width / 2, right_stick_pos.y - rightStickRangeTex->height / 2);
+	auto const rightStickRangePosBottomRight = ImVec2(right_stick_pos.x + rightStickRangeTex->width / 2,
+		right_stick_pos.y + rightStickRangeTex->height / 2);
+	auto const rightStickRangeUvTopLeft = ImVec2(rightStickRangeTex->left, rightStickRangeTex->top);
+	auto const rightStickRangeUvBottomRight = ImVec2(rightStickRangeTex->right, rightStickRangeTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, rightStickRangePosTopLeft, rightStickRangePosBottomRight,
+		rightStickRangeUvTopLeft, rightStickRangeUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
+	
+	auto const rightStickCenterPos = ImVec2(right_stick_pos.x + rightStickRangeTex->width / 2.0f * xbox_controller_key_status[21] / 32768.0f,
+		right_stick_pos.y - rightStickRangeTex->height / 2.0f * xbox_controller_key_status[22] / 32768.0f);
+	auto const rightStickTex = Tex3DS_GetSubTexture(s_xboximgT3x1, xbox_controller_key_status[8] ? xboximg1_rspress_idx : xboximg1_rs_idx);
+	auto const rightStickPosTopLeft = ImVec2(rightStickCenterPos.x - rightStickTex->width / 2, rightStickCenterPos.y - rightStickTex->height / 2);
+	auto const rightStickPosBottomRight = ImVec2(rightStickCenterPos.x + rightStickTex->width / 2, rightStickCenterPos.y + rightStickTex->height / 2);
+	auto const rightStickUvTopLeft = ImVec2(rightStickTex->left, rightStickTex->top);
+	auto const rightStickUvBottomRight = ImVec2(rightStickTex->right, rightStickTex->bottom);
+	ImGui::GetForegroundDrawList()->AddImage(
+		(ImTextureID)&s_xboximgTexture1, rightStickPosTopLeft, rightStickPosBottomRight,
+		rightStickUvTopLeft, rightStickUvBottomRight, ImGui::GetColorU32(ImGuiCol_Text));
 }
 
 
@@ -214,7 +406,7 @@ void draw_status_bar()
 		gfx_charge1_idx,
 	};
 
-	auto lineHeight=ImGui::GetTextLineHeight();
+	auto lineHeight=16.0f;//ImGui::GetTextLineHeight();
 	
 	auto const batteryTex = Tex3DS_GetSubTexture (s_gfxT3x, batteryLevels[batteryLevel]);
 	auto const p3=ImVec2(style.FramePadding.x,style.FramePadding.y);
@@ -250,6 +442,7 @@ void draw_vconv_window()
 		ImGuiIO&io=ImGui::GetIO();
 		if(controller_enabled){
 			io.ConfigFlags|=ImGuiConfigFlags_NoKeyboard;
+			memset(xbox_controller_key_status,0,sizeof(xbox_controller_key_status));
 		}else{
 			io.ConfigFlags=(~ImGuiConfigFlags_NoKeyboard)&io.ConfigFlags;
 		}
@@ -334,13 +527,31 @@ void image_init()
 		error_msg="Cannot import texture.";
 		return;
 	}
+	s_xboximgT3x1=Tex3DS_TextureImport(xboximg1_t3x,xboximg1_t3x_size,&s_xboximgTexture1,nullptr,false);
+	if(!s_xboximgT3x1)
+	{
+		error_msg="Cannot import Xbox image texture1.";
+		return;
+	}
+	s_xboximgT3x2=Tex3DS_TextureImport(xboximg2_t3x,xboximg2_t3x_size,&s_xboximgTexture2,nullptr,false);
+	if(!s_xboximgT3x2)
+	{
+		error_msg="Cannot import Xbox image texture2.";
+		return;
+	}
 	C3D_TexSetFilter (&s_gfxTexture, GPU_LINEAR, GPU_LINEAR);
+	C3D_TexSetFilter (&s_xboximgTexture1, GPU_LINEAR, GPU_LINEAR);
+	C3D_TexSetFilter (&s_xboximgTexture2, GPU_LINEAR, GPU_LINEAR);
 }
 
 void image_release()
 {
 	Tex3DS_TextureFree(s_gfxT3x);
+	Tex3DS_TextureFree(s_xboximgT3x1);
+	Tex3DS_TextureFree(s_xboximgT3x2);
 	C3D_TexDelete(&s_gfxTexture);
+	C3D_TexDelete(&s_xboximgTexture1);
+	C3D_TexDelete(&s_xboximgTexture2);
 }
 
 bool enable_backlights(bool b)

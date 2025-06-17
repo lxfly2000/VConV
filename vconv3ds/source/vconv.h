@@ -11,6 +11,7 @@ extern unsigned short serverPort;
 extern std::string error_msg;
 extern bool running;
 extern bool screen_light;
+extern short xbox_controller_key_status[23];//使用中的Xbox手柄按键状态，下标是KeyCode
 
 bool vconv_init();
 bool vconv_release();
