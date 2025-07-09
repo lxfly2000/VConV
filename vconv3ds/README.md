@@ -8,7 +8,8 @@ Virtual Controller for VConV
 * VSCode编辑器，安装C/C++，Makefile Tools扩展
 
 ## 准备
-检查.vscode文件夹内的JSON文件中的路径是否正确，如有需要请修改
+1. 安装库：`pacman -S 3ds-libvorbisidec`
+2. 检查.vscode文件夹内的JSON文件中的路径是否正确，如有需要请修改
 
 ## 实机调试方法
 1. 在3DS上启动Homebrew Launcher，按Y等待网络传输

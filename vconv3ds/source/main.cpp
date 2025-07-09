@@ -39,6 +39,7 @@ C3D_RenderTarget *s_bottom = nullptr;
 void *s_depthStencil = nullptr;
 
 bool controller_enabled=false;
+bool show_onscreen_buttons=false;
 
 Tex3DS_Texture s_gfxT3x,s_xboximgT3x1,s_xboximgT3x2;
 C3D_Tex s_gfxTexture,s_xboximgTexture1,s_xboximgTexture2;
@@ -463,7 +464,7 @@ void draw_vconv_window()
 	}
 	ImGui::Text("IP");
 	ImGui::SameLine();
-	if(ImGui::Button(serverIp.c_str(),ImVec2(150,0))){
+	if(ImGui::Button(serverIp.c_str(),ImVec2(120,0))){
 		std::string newIp;
 		if(get_text_input(serverIp,newIp,1,39)){
 			auto ip=inet_addr(newIp.c_str());
@@ -476,12 +477,16 @@ void draw_vconv_window()
 	ImGui::SameLine();
 	ImGui::Text("Port");
 	ImGui::SameLine();
-	if(ImGui::Button(std::to_string(serverPort).c_str(),ImVec2(80,0))){
+	if(ImGui::Button(std::to_string(serverPort).c_str(),ImVec2(46,0))){
 		std::string sPort=std::to_string(serverPort);
 		if(get_text_input(sPort,sPort,2,5)){
 			serverPort=atoi(sPort.c_str());
 			update_sockets_config();
 		}
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("Extra inputs")){
+		show_onscreen_buttons=true;
 	}
 
 	//https://xinqinew.github.io/2022/02/imgui%E8%A1%A8%E6%A0%BC/

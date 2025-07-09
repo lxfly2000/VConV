@@ -23,6 +23,7 @@
 bool running=true;
 bool screen_light=true;
 int button_mapping_3ds_xbox[18]={11,12,6,5,4,3,1,2,10,9,13,14,15,16,17,18,19,20};
+int button_mapping_onscreen_buttons_xbox[4]={17,18,7,8};
 short xbox_controller_key_status[23]={0};
 std::string serverIp=SERVER_IP_DEFAULT;
 unsigned short serverPort=32000;
