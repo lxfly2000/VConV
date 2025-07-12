@@ -47,6 +47,7 @@ C3D_Tex s_gfxTexture,s_xboximgTexture1,s_xboximgTexture2;
 void draw_controller();
 void draw_status_bar();
 void draw_vconv_window();
+void draw_onscreen_buttons();
 void image_init();
 void image_release();
 bool enable_backlights(bool);
@@ -124,7 +125,10 @@ int main(int argc, char *argv[]) {
 
 			draw_controller();
 			draw_status_bar();
-			draw_vconv_window();
+			if(show_onscreen_buttons)
+				draw_onscreen_buttons();
+			else
+				draw_vconv_window();
 
 			ImGui::Render();
 
@@ -444,6 +448,8 @@ void draw_vconv_window()
 		if(controller_enabled){
 			io.ConfigFlags|=ImGuiConfigFlags_NoKeyboard;
 			memset(xbox_controller_key_status,0,sizeof(xbox_controller_key_status));
+			onscreen_buttons_key_status=0;
+			last_onscreen_buttons_key_status=0;
 		}else{
 			io.ConfigFlags=(~ImGuiConfigFlags_NoKeyboard)&io.ConfigFlags;
 		}
@@ -519,9 +525,112 @@ void draw_vconv_window()
 			}
 			ImGui::PopID();
 		}
+		for(int i=0;i<ARRAYSIZE(button_mapping_onscreen_buttons_xbox);i++){
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text(keycodes_onscreen_buttons[i].description);
+			ImGui::TableNextColumn();
+			ImGui::Text("%d",keystatus_onscreen_buttons[i]);
+			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(105);
+			ImGui::PushID(2100+i);
+			if(ImGui::BeginCombo("",keycodes_xbox[index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]]].description,ImGuiComboFlags_PopupAlignLeft)){
+				for(int m=0;m<ARRAYSIZE(index_used_keycodes_xbox);m++){
+					const bool is_selected = (button_mapping_onscreen_buttons_xbox[i] == m);
+					if (ImGui::Selectable(keycodes_xbox[index_used_keycodes_xbox[m]].description, is_selected)){
+						button_mapping_onscreen_buttons_xbox[i] = m;
+					}
+					
+					// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+					if (is_selected){
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			ImGui::PopID();
+		}
 		ImGui::EndTable();
 	}
 	ImGui::End();
+}
+
+void draw_onscreen_buttons(){
+	const ImVec2 returnButtonTopLeft=ImVec2(40,240);
+	const ImVec2 returnButtonBottomRight=ImVec2(40+320,240+40);
+	const ImVec2 onscreenButtonTopLeft[4] = {
+		ImVec2(40, 240 + 40),
+		ImVec2(40 + 160, 240 + 40),
+		ImVec2(40, 240 + 140),
+		ImVec2(40 + 160, 240 + 140)
+	};
+	const ImVec2 onscreenButtonBottomRight[4] = {
+		ImVec2(40 + 160, 240 + 40 + 100),
+		ImVec2(40 + 160 + 160, 240 + 40 + 100),
+		ImVec2(40 + 160, 240 + 140 + 100),
+		ImVec2(40 + 160 + 160, 240 + 140 + 100)
+	};
+	bool touched=keysHeld()&KEY_TOUCH;
+	static bool lastReturnButtonPressed=false;
+	bool returnButtonPressed=false;
+	touchPosition touchPos;
+	hidTouchRead(&touchPos);
+	touchPos.px+=40;
+	touchPos.py+=240;
+	if(touched&&touchPos.px>=returnButtonTopLeft.x&&touchPos.px<returnButtonBottomRight.x&&touchPos.py>=returnButtonTopLeft.y&&touchPos.py<returnButtonBottomRight.y)
+		returnButtonPressed=true;
+	for(int i=0;i<4;i++){
+		if(touched&&touchPos.px>=onscreenButtonTopLeft[i].x&&touchPos.px<onscreenButtonBottomRight[i].x&&touchPos.py>=onscreenButtonTopLeft[i].y&&touchPos.py<onscreenButtonBottomRight[i].y){
+			onscreen_buttons_key_status|=(1<<i);
+		}else{
+			onscreen_buttons_key_status&=~(1<<i);
+		}
+	}
+	if(lastReturnButtonPressed&&!returnButtonPressed&&!touched)
+		show_onscreen_buttons=false;
+	lastReturnButtonPressed=returnButtonPressed;
+
+	const char returnText[] = "Close Extra Inputs";
+	auto const drawSize = ImGui::CalcTextSize(returnText);
+	ImGui::GetForegroundDrawList()->Flags=ImDrawListFlags_AntiAliasedLines;
+	if(returnButtonPressed){
+		ImGui::GetForegroundDrawList()->AddRectFilled(returnButtonTopLeft, returnButtonBottomRight, ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)));
+		ImGui::GetForegroundDrawList()->AddText(
+			ImVec2((returnButtonTopLeft.x + returnButtonBottomRight.x - drawSize.x) / 2,
+			(returnButtonTopLeft.y + returnButtonBottomRight.y - drawSize.y) / 2),
+			ImGui::GetColorU32(ImVec4(0.0f,0.0f,0.0f,1.0f)), returnText);
+	}else{
+		//ImGui::GetForegroundDrawList()->AddRect(returnButtonTopLeft, returnButtonBottomRight, ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)));
+		ImGui::GetForegroundDrawList()->AddText(
+			ImVec2((returnButtonTopLeft.x + returnButtonBottomRight.x - drawSize.x) / 2,
+			(returnButtonTopLeft.y + returnButtonBottomRight.y - drawSize.y) / 2),
+			ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)), returnText);
+	}
+	for(int i=0;i<4;i++){
+		auto const labelSize=ImGui::CalcTextSize(keycodes_onscreen_buttons[i].description);
+		auto const keyNameSize=ImGui::CalcTextSize(keycodes_xbox[index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]]].description);
+		if(onscreen_buttons_key_status&(1<<i)){
+			ImGui::GetForegroundDrawList()->AddRectFilled(onscreenButtonTopLeft[i], onscreenButtonBottomRight[i], ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)));
+			ImGui::GetForegroundDrawList()->AddText(
+				ImVec2((onscreenButtonTopLeft[i].x + onscreenButtonBottomRight[i].x - labelSize.x) / 2,
+				(onscreenButtonTopLeft[i].y + onscreenButtonBottomRight[i].y) / 2 - labelSize.y),
+				ImGui::GetColorU32(ImVec4(0.0f,0.0f,0.0f,1.0f)), keycodes_onscreen_buttons[i].description);
+			ImGui::GetForegroundDrawList()->AddText(
+				ImVec2((onscreenButtonTopLeft[i].x + onscreenButtonBottomRight[i].x - keyNameSize.x) / 2,
+				(onscreenButtonTopLeft[i].y + onscreenButtonBottomRight[i].y) / 2),
+				ImGui::GetColorU32(ImVec4(0.0f,0.0f,0.0f,1.0f)), keycodes_xbox[index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]]].description);
+		}else{
+			ImGui::GetForegroundDrawList()->AddRect(onscreenButtonTopLeft[i], onscreenButtonBottomRight[i], ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)));
+			ImGui::GetForegroundDrawList()->AddText(
+				ImVec2((onscreenButtonTopLeft[i].x + onscreenButtonBottomRight[i].x - labelSize.x) / 2,
+				(onscreenButtonTopLeft[i].y + onscreenButtonBottomRight[i].y) / 2 - labelSize.y),
+				ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)), keycodes_onscreen_buttons[i].description);
+			ImGui::GetForegroundDrawList()->AddText(
+				ImVec2((onscreenButtonTopLeft[i].x + onscreenButtonBottomRight[i].x - keyNameSize.x) / 2,
+				(onscreenButtonTopLeft[i].y + onscreenButtonBottomRight[i].y) / 2),
+				ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f)), keycodes_xbox[index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]]].description);
+		}
+	}
 }
 
 void image_init()

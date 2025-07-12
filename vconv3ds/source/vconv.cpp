@@ -23,7 +23,9 @@
 bool running=true;
 bool screen_light=true;
 int button_mapping_3ds_xbox[18]={11,12,6,5,4,3,1,2,10,9,13,14,15,16,17,18,19,20};
-int button_mapping_onscreen_buttons_xbox[4]={17,18,7,8};
+int button_mapping_onscreen_buttons_xbox[4]={15,16,7,8};
+unsigned char onscreen_buttons_key_status=0;
+unsigned char last_onscreen_buttons_key_status=0;
 short xbox_controller_key_status[23]={0};
 std::string serverIp=SERVER_IP_DEFAULT;
 unsigned short serverPort=32000;
@@ -89,6 +91,9 @@ bool read_settings()
     for(int i=0;i<ARRAYSIZE(button_mapping_3ds_xbox);i++){
         f>>button_mapping_3ds_xbox[i];
     }
+    for(int i=0;i<ARRAYSIZE(button_mapping_onscreen_buttons_xbox);i++){
+        f>>button_mapping_onscreen_buttons_xbox[i];
+    }
     return true;
 }
 
@@ -102,6 +107,11 @@ bool save_settings()
     for(int i=0;i<ARRAYSIZE(button_mapping_3ds_xbox);i++){
         if(i>0)f<<" ";
         f<<button_mapping_3ds_xbox[i];
+    }
+    f<<std::endl;
+    for(int i=0;i<ARRAYSIZE(button_mapping_onscreen_buttons_xbox);i++){
+        if(i>0)f<<" ";
+        f<<button_mapping_onscreen_buttons_xbox[i];
     }
     return true;
 }
@@ -258,5 +268,22 @@ bool vconv_send()
             xbox_controller_key_status[keycodeXbox]=valueXbox;
         }
     }
+    for(int i=0;i<4;i++){
+        if(((onscreen_buttons_key_status>>i)&1)==1&&((last_onscreen_buttons_key_status>>i)&1)==0){
+            int keycodeXbox=index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]];
+            int valueXbox=keycodes_xbox[keycodeXbox].value_range_end;
+            auto sendData=make_send_data(keycodeXbox,valueXbox);
+            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+            xbox_controller_key_status[keycodeXbox]=valueXbox;
+        }
+        if(((onscreen_buttons_key_status>>i)&1)==0&&((last_onscreen_buttons_key_status>>i)&1)==1){
+            int keycodeXbox=index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]];
+            int valueXbox=keycodes_xbox[keycodeXbox].value_range_start;
+            auto sendData=make_send_data(keycodeXbox,valueXbox);
+            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+            xbox_controller_key_status[keycodeXbox]=valueXbox;
+        }
+    }
+    last_onscreen_buttons_key_status=onscreen_buttons_key_status;
     return true;
 }

@@ -13,6 +13,8 @@ extern bool running;
 extern bool screen_light;
 extern short xbox_controller_key_status[23];//使用中的Xbox手柄按键状态，下标是KeyCode
 extern int button_mapping_onscreen_buttons_xbox[4];//触屏按钮对应的xbox按键索引
+extern unsigned char onscreen_buttons_key_status;//触屏按钮的按键状态
+extern unsigned char last_onscreen_buttons_key_status;//上次触屏按钮的按键状态
 
 bool vconv_init();
 bool vconv_release();
