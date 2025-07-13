@@ -71,10 +71,10 @@ const KEYCODE keycodes_xbox[23]={
 };
 
 const KEYCODE keycodes_onscreen_buttons[4]={
-	{0,1,0,1,"X1"},
-	{1,1,0,1,"X2"},
-	{2,1,0,1,"X3"},
-	{3,1,0,1,"X4"}
+	{0,1,0,1,"F1"},
+	{1,1,0,1,"F2"},
+	{2,1,0,1,"F3"},
+	{3,1,0,1,"F4"}
 };
 
 const int index_used_keycodes_3ds[18]={1,2,3,4,5,6,7,8,9,10,11,12,15,16,33,34,35,36};

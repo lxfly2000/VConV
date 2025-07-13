@@ -272,16 +272,20 @@ bool vconv_send()
         if(((onscreen_buttons_key_status>>i)&1)==1&&((last_onscreen_buttons_key_status>>i)&1)==0){
             int keycodeXbox=index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]];
             int valueXbox=keycodes_xbox[keycodeXbox].value_range_end;
-            auto sendData=make_send_data(keycodeXbox,valueXbox);
-            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
-            xbox_controller_key_status[keycodeXbox]=valueXbox;
+            if(keycodeXbox!=0){
+                auto sendData=make_send_data(keycodeXbox,valueXbox);
+                check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+                xbox_controller_key_status[keycodeXbox]=valueXbox;
+            }
         }
         if(((onscreen_buttons_key_status>>i)&1)==0&&((last_onscreen_buttons_key_status>>i)&1)==1){
             int keycodeXbox=index_used_keycodes_xbox[button_mapping_onscreen_buttons_xbox[i]];
             int valueXbox=keycodes_xbox[keycodeXbox].value_range_start;
-            auto sendData=make_send_data(keycodeXbox,valueXbox);
-            check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
-            xbox_controller_key_status[keycodeXbox]=valueXbox;
+            if(keycodeXbox!=0){
+                auto sendData=make_send_data(keycodeXbox,valueXbox);
+                check_send_to(&sendData,1+keycodes_xbox[keycodeXbox].value_length);
+                xbox_controller_key_status[keycodeXbox]=valueXbox;
+            }
         }
     }
     last_onscreen_buttons_key_status=onscreen_buttons_key_status;

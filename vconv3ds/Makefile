@@ -42,7 +42,7 @@ ROMFS		:=	romfs
 #GFXBUILD	:=	$(ROMFS)/gfx
 
 APP_AUTHOR	:=	lxfly2000
-APP_DESCRIPTION	:=	Virtual Controller for ViGEm
+APP_DESCRIPTION	:=	Simulate Xbox Controller
 
 #---------------------------------------------------------------------------------
 # options for code generation
